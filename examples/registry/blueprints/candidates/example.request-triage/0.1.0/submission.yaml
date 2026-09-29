@@ -1,0 +1,12 @@
+submissionVersion: submission/v0-provisional
+synthetic: true
+submissionId: SYNTHETIC-SUBMISSION-0001
+submitter: { kind: zep, identity: PLACEHOLDER-zep-steward }
+submittedAt: "2026-02-01T00:00:00Z"
+action: propose-candidate
+subject: { id: example.request-triage, version: 0.1.0 }
+artifacts:
+  blueprintDigest: "sha256:ce9c6c105f86a8ac015ae91f3135ae330d7f704665343f871d3ceda29675fb97"
+  sanitisationReportDigest: "sha256:81878f1aa106214a3a7bc44467ed832689a3c9d133b793ea8d9ce3da5f92deca"
+  evalSuiteDigest: "sha256:493007077a33948cd7972996b7dae31f920da5c28a0affc8472378f045a6e7be"
+attestations: { noWorkspaceIdentifiers: true, noTenantContent: true, rawEvidenceExcluded: true }

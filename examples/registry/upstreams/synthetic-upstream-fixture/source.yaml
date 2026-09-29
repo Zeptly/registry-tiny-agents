@@ -1,0 +1,13 @@
+sourceVersion: upstream-source/v0-provisional
+synthetic: true
+id: synthetic-upstream-fixture
+kind: synthetic-fixture
+location: not-a-real-location
+licences:
+  - scope: SYNTHETIC fixture
+    spdx: Apache-2.0
+    observedAt: "2026-01-01"
+    caveat: SYNTHETIC. Exists only so example upstream-seed provenance can resolve its source descriptor.
+ingestion:
+  status: specified-only
+  lock: lock.json

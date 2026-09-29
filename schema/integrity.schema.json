@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:zeptly:tiny-agents:schema:integrity",
+  "title": "Version-directory seal (PROVISIONAL digest convention)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["integrityVersion", "digest", "files"],
+  "properties": {
+    "integrityVersion": { "const": "integrity/v0-provisional" },
+    "digest": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digest" },
+    "files": { "type": "object", "minProperties": 1, "additionalProperties": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digest" } }
+  }
+}

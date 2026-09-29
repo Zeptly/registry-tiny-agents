@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:zeptly:tiny-agents:schema:common",
+  "title": "Common definitions (PROVISIONAL serialisation conventions)",
+  "description": "PROVISIONAL. The syntax of registryId, registryRef.registry, capabilityName, digest and semverRange is subject to cross-registry reconciliation. Every serialisation convention lives in this file (and tools/src/ids.ts); nothing else in the codebase should depend on the exact syntax.",
+  "$defs": {
+    "registryId": {
+      "description": "PROVISIONAL stable object identifier. Filesystem-safe by construction: it is used verbatim as a directory name (see tools/src/layout.ts). No structure inside the id is meaningful to tooling.",
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 128,
+      "pattern": "^[a-z0-9]+([._-][a-z0-9]+)*$"
+    },
+    "registryName": {
+      "description": "PROVISIONAL registry/type discriminator for cross-registry references (e.g. 'skills').",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,31}$"
+    },
+    "semver": {
+      "description": "SemVer 2.0.0 version. (Change classification is PROVISIONAL, see docs/LIFECYCLE.md.)",
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$"
+    },
+    "versionRange": {
+      "description": "PROVISIONAL version or version range for a cross-registry reference.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[0-9A-Za-z.^~<>=* |-]+$"
+    },
+    "digest": {
+      "description": "PROVISIONAL content digest convention: '<algorithm>:<hex>'.",
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "registryRef": {
+      "description": "PROVISIONAL cross-registry reference, kept STRUCTURED so the string serialisation can change freely. Semantic requirement: registry/type + id + version/range + optional digest.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["registry", "id", "version"],
+      "properties": {
+        "registry": { "$ref": "#/$defs/registryName" },
+        "id": { "$ref": "#/$defs/registryId" },
+        "version": { "$ref": "#/$defs/versionRange" },
+        "digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "capabilityName": {
+      "description": "PROVISIONAL abstract capability name. The shared capability/tool/gateway namespace is NOT yet reconciled.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(\\.[a-z][a-z0-9-]*)+$",
+      "maxLength": 80
+    },
+    "key": {
+      "description": "Local identifier inside a single blueprint (step id, slot name, skill key, capability key).",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,47}$"
+    },
+    "relPath": {
+      "description": "Relative path inside the same version directory. '..' segments are rejected by the validator.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]*$",
+      "maxLength": 200
+    },
+    "shortText": { "type": "string", "minLength": 1, "maxLength": 500 },
+    "longText": { "type": "string", "minLength": 1, "maxLength": 4000 },
+    "effectClass": {
+      "description": "AgentGit-inspired tool-effect classification (vocabulary only; no AgentGit dependency).",
+      "enum": ["reversible", "compensable", "irreversible"]
+    },
+    "dateTime": { "type": "string", "format": "date-time" },
+    "actor": {
+      "description": "Governance identity. Placeholders (prefix 'PLACEHOLDER-') are rejected in a production registry root.",
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 100
+    }
+  }
+}

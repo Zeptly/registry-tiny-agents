@@ -1,0 +1,87 @@
+{
+  "indexFormat": "tiny-agent-registry-index/v0-provisional",
+  "registryPurpose": "example",
+  "entries": [
+    {
+      "id": "example.request-triage",
+      "version": "0.1.0",
+      "maturity": "candidate",
+      "origin": "evolved",
+      "provenanceClass": "discovered",
+      "lifecycle": "active",
+      "name": "[SYNTHETIC] Inbound Request Triage",
+      "taskClass": "ops.triage",
+      "summary": "Classify an inbound request into a small category set and annotate it with a priority.",
+      "capabilities": [
+        "queue.read",
+        "record.annotate"
+      ],
+      "skills": [],
+      "synthetic": true,
+      "path": "blueprints/candidates/example.request-triage/0.1.0",
+      "blueprintDigest": "sha256:ce9c6c105f86a8ac015ae91f3135ae330d7f704665343f871d3ceda29675fb97",
+      "sealDigest": null
+    },
+    {
+      "id": "example.seed-page-reader",
+      "version": "0.1.0",
+      "maturity": "candidate",
+      "origin": "upstream-seed",
+      "provenanceClass": "upstream-seed",
+      "lifecycle": "active",
+      "name": "[SYNTHETIC] Seed Page Reader",
+      "taskClass": "web.read",
+      "summary": "Read a single web page and answer a question about it.",
+      "capabilities": [
+        "web.read"
+      ],
+      "skills": [],
+      "synthetic": true,
+      "path": "blueprints/candidates/example.seed-page-reader/0.1.0",
+      "blueprintDigest": "sha256:7e5f36873c8585d9a204c2e629eaa2e90afa7ca2552cc7526acb9fc3756c7c01",
+      "sealDigest": null
+    },
+    {
+      "id": "example.structured-summary",
+      "version": "1.0.0",
+      "maturity": "canonical",
+      "origin": "native",
+      "provenanceClass": "native",
+      "lifecycle": "active",
+      "name": "[SYNTHETIC] Structured Document Summary",
+      "taskClass": "text.summarise",
+      "summary": "Summarise a single document into a headline summary and a bounded list of key points.",
+      "capabilities": [
+        "document.read"
+      ],
+      "skills": [
+        {
+          "registry": "skills",
+          "id": "synthetic.summarise-text",
+          "version": "^1.0.0"
+        }
+      ],
+      "synthetic": true,
+      "path": "blueprints/canonical/example.structured-summary/1.0.0",
+      "blueprintDigest": "sha256:23abb86e98e341058d31c960b00f4879624a1fd155828df6da1081f01c60798b",
+      "sealDigest": "sha256:592290fee57071b7e36195ec773b04115ba14597e5e0b2ecd1e675f3f8a4d4e7"
+    }
+  ],
+  "resolution": [
+    {
+      "id": "example.request-triage",
+      "latestActiveCanonical": null,
+      "latestActiveCandidate": "0.1.0"
+    },
+    {
+      "id": "example.seed-page-reader",
+      "latestActiveCanonical": null,
+      "latestActiveCandidate": "0.1.0"
+    },
+    {
+      "id": "example.structured-summary",
+      "latestActiveCanonical": "1.0.0",
+      "latestActiveCandidate": null
+    }
+  ]
+}

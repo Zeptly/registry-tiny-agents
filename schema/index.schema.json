@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:zeptly:tiny-agents:schema:index",
+  "title": "Generated registry index (PROVISIONAL format; publication unreconciled)",
+  "type": "object",
+  "required": ["indexFormat", "registryPurpose", "entries"],
+  "properties": {
+    "indexFormat": { "const": "tiny-agent-registry-index/v0-provisional" },
+    "registryPurpose": { "enum": ["production", "example"] },
+    "entries": { "type": "array" }
+  }
+}

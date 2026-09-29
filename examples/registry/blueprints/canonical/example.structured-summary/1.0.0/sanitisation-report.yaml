@@ -1,0 +1,16 @@
+reportVersion: sanitisation-report/v0-provisional
+synthetic: true
+subject: { id: example.structured-summary, version: 1.0.0 }
+blueprintDigest: "sha256:23abb86e98e341058d31c960b00f4879624a1fd155828df6da1081f01c60798b"
+checks:
+  - { kind: secret-scan, result: pass, findings: 0, tool: SYNTHETIC-scanner }
+  - { kind: pii-scan, result: pass, findings: 0, tool: SYNTHETIC-scanner }
+  - { kind: workspace-identifier-scan, result: pass, findings: 0, tool: SYNTHETIC-scanner }
+  - { kind: concrete-config-scan, result: pass, findings: 0, tool: SYNTHETIC-scanner }
+  - { kind: slot-generalisation, result: pass, findings: 0 }
+  - { kind: synthetic-examples, result: pass, findings: 0 }
+generalisation:
+  tenantContentRemoved: true
+  tenantSpecificValuesBoundToSlots: true
+  summary: SYNTHETIC report. The example was written from scratch and contains no tenant data by construction.
+reviewer: { kind: human, identity: PLACEHOLDER-sanitisation-reviewer }

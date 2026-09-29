@@ -1,0 +1,22 @@
+sourceVersion: upstream-source/v0-provisional
+synthetic: false
+id: huggingface-tiny-agents
+kind: huggingface-dataset
+location: https://huggingface.co/datasets/tiny-agents/tiny-agents
+format: "<author>/<agent>/agent.json plus optional PROMPT.md | AGENTS.md | README.md | EXAMPLES.md; data.parquet is a derived mirror and is NOT a source"
+licences:
+  - scope: dataset repository as a whole (declared on the dataset card)
+    spdx: Apache-2.0
+    observedAt: "2026-09-29"
+    caveat: Per-agent licences are not declared. Community-contributed agents inherit only the dataset-level declaration, which must be treated as UNVERIFIED for each agent until a human licence review says otherwise.
+  - scope: '@huggingface/tiny-agents runtime package (not catalogue content)'
+    spdx: MIT
+    observedAt: "2026-09-29"
+observations:
+  - "At specification time the catalogue held 9 agent configurations from 6 authors (dataset revision 9cc0349c768ff6b49c65ed5dd179c0025e3e4bc4, last modified 2026-04-26)."
+  - agent.json carries only a hard-coded model, provider or endpointUrl, inputs and MCP servers; there is no task class, IO contract, evaluation, version or licence field.
+  - stdio servers launch arbitrary commands (npx @latest, docker run, mcp-remote) with unpinned versions and credentials passed via arguments or env; none of that may enter a blueprint.
+ingestion:
+  status: specified-only
+  specification: ingestion/SPEC.md
+  lock: lock.json

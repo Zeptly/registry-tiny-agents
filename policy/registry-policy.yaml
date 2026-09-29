@@ -1,0 +1,112 @@
+# Registry governance policy — PROVISIONAL (see docs/PROVISIONAL.md).
+# Thresholds are POLICY, not architecture: change them here via PR. Validator code never hardcodes them.
+policyVersion: 0
+
+# Wisdom-of-Compute recurrence discovery defaults. 3 distinct workspaces is a DEFAULT policy
+# threshold, not an architectural invariant. It applies only where a class opts in with `default`.
+wisdomOfComputeDefaults:
+  recurrence:
+    minDistinctWorkspaces: 3
+    minExecutions: 10
+
+# Requirements vary by provenance class. Derived from (origin, provenance.evolution.kind):
+#   native        origin=native                       deliberately designed; NO recurrence evidence required
+#   upstream-seed origin=upstream-seed                 imported/normalised seed; never trusted by default
+#   discovered    origin=evolved, evolution=discovered new pattern clustered from cross-workspace recurrence
+#   refined       origin=evolved, evolution=refined    evolution of an existing blueprint from further evidence
+classes:
+  native:
+    admission:
+      recurrence: none
+    promotion:
+      requireEvalPass: true
+      requireSanitisationReport: true
+      minHumanReviewers: 1
+      requiredReviewerRoles: [maintainer]
+      recurrence: none
+  upstream-seed:
+    admission:
+      recurrence: none
+      requireLicenceSpdx: true
+    promotion:
+      requireEvalPass: true
+      requireSanitisationReport: true
+      minHumanReviewers: 2
+      requiredReviewerRoles: [maintainer, security]
+      requireLicenceVerified: true
+      requireSecurityValidationPassed: true
+      recurrence: none
+  discovered:
+    admission:
+      recurrence: default
+    promotion:
+      requireEvalPass: true
+      requireSanitisationReport: true
+      minHumanReviewers: 2
+      requiredReviewerRoles: [maintainer, privacy]
+      recurrence: default
+  refined:
+    admission:
+      recurrence: default
+      requireParentCanonical: true
+    promotion:
+      requireEvalPass: true
+      requireSanitisationReport: true
+      minHumanReviewers: 2
+      requiredReviewerRoles: [maintainer, privacy]
+      recurrence: default
+
+# Tenant-privacy and no-concrete-config detectors used by `registry scan` and `registry validate`.
+privacy:
+  # Check kinds every sanitisation report must contain (all must pass).
+  requiredSanitisationChecks:
+    - secret-scan
+    - pii-scan
+    - workspace-identifier-scan
+    - concrete-config-scan
+    - slot-generalisation
+  forbiddenKeys:
+    - command
+    - args
+    - env
+    - endpoint
+    - endpointUrl
+    - url
+    - uri
+    - apiKey
+    - api_key
+    - token
+    - password
+    - secret
+    - credentials
+    - headers
+    - provider
+    - model
+    - modelId
+    - servers
+    - workspaceId
+    - workspace_id
+    - tenantId
+    - tenant_id
+    - customer
+    - customerName
+    - orgId
+  forbiddenConcretePatterns:
+    - { id: url, pattern: "\\b(https?|wss?|ftp)://\\S+", flags: "i" }
+    - { id: ipv4, pattern: "\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b" }
+    - { id: email, pattern: "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\\b" }
+    - { id: secret-aws, pattern: "\\bAKIA[0-9A-Z]{16}\\b" }
+    - { id: secret-github, pattern: "\\b(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{20,}\\b|github_pat_[A-Za-z0-9_]{20,}" }
+    - { id: secret-generic-key, pattern: "\\b(sk|pk|hf|xox[baprs])[-_][A-Za-z0-9-]{16,}\\b" }
+    - { id: secret-private-key, pattern: "-----BEGIN [A-Z ]*PRIVATE KEY-----" }
+    - { id: secret-jwt, pattern: "\\beyJ[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]{8,}" }
+    - { id: secret-assignment, pattern: "\\b(password|passwd|secret|token|api[_-]?key|bearer)\\b\\s*[:=]\\s*\\S{6,}", flags: "i" }
+    - { id: executable-command, pattern: "(^|[\\s`])(npx|npm (install|i|run|exec)|pnpm (add|dlx|exec)|yarn (add|dlx)|docker (run|exec|compose)|curl|wget|pip3? install|sudo|bash -c|sh -c)(\\s|$)", flags: "i" }
+    - { id: concrete-model-id, pattern: "\\b(claude|gpt|gemini|llama|qwen|mistral|mixtral|deepseek|command-r)[-_ ]?\\d|[A-Za-z0-9-]+/[A-Za-z0-9._-]*(instruct|gguf|-chat)\\b", flags: "i" }
+    - { id: workspace-identifier, pattern: "\\b(ws|workspace|tenant|org|acct|account|customer)[_-][a-z0-9]{6,}\\b", flags: "i" }
+    - { id: uuid, pattern: "\\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\b", flags: "i" }
+  # A detector may be silenced for specific JSON paths only. Everything else is scanned.
+  pathExemptions:
+    - { detector: uuid, pathPattern: "^provenance\\.evidence\\[\\d+\\]\\.ref$" }
+    - { detector: uuid, pathPattern: "^submissionId$" }
+    - { detector: workspace-identifier, pathPattern: "^checks\\[\\d+\\]\\.kind$" }

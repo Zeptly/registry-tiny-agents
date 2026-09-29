@@ -1,0 +1,10 @@
+resultVersion: eval-result/v0-provisional
+synthetic: true
+subject: { id: example.structured-summary, version: 1.0.0 }
+suiteDigest: "sha256:934df0e4087d8a50d811f720ab26f1f19b80686c03e445e3abb058eb02100ba0"
+runner: SYNTHETIC fabricated result - not a real evaluation run
+summary: { cases: 3, passed: 3, passRate: 1 }
+caseResults:
+  - { case: synthetic-short-memo, passed: true }
+  - { case: synthetic-injection-attempt, passed: true }
+  - { case: synthetic-long-list, passed: true }

@@ -1,0 +1,3 @@
+registryRootVersion: registry-root/v0-provisional
+purpose: example
+description: SYNTHETIC example registry root used to prove the architecture and to drive tests. Nothing here is a real Zeptly blueprint, evidence, evaluation or provenance record.

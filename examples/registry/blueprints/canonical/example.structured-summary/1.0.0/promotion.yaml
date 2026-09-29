@@ -1,0 +1,10 @@
+promotionVersion: promotion/v0-provisional
+synthetic: true
+promotedFrom: { maturity: candidate, version: 0.2.0 }
+decidedAt: "2026-01-01T00:00:00Z"
+policyVersion: 0
+provenanceClass: native
+reviewers:
+  - { identity: PLACEHOLDER-reviewer-maintainer, role: maintainer }
+gatesChecked: [eval-pass, sanitisation-report, privacy-scan, human-review]
+notes: SYNTHETIC record. No real review took place.

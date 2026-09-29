@@ -1,0 +1,11 @@
+{
+  "integrityVersion": "integrity/v0-provisional",
+  "digest": "sha256:592290fee57071b7e36195ec773b04115ba14597e5e0b2ecd1e675f3f8a4d4e7",
+  "files": {
+    "blueprint.yaml": "sha256:23abb86e98e341058d31c960b00f4879624a1fd155828df6da1081f01c60798b",
+    "evals/results/synthetic-run-0001.yaml": "sha256:8299a4830325433a376924db62d8d8888c3f2645d9355ff33c472d917531f7d5",
+    "evals/suite.yaml": "sha256:934df0e4087d8a50d811f720ab26f1f19b80686c03e445e3abb058eb02100ba0",
+    "promotion.yaml": "sha256:676b78d44560892bac24313c947b03e37e1e5ba260d9c538f35277721f54b03e",
+    "sanitisation-report.yaml": "sha256:f0cdedf2c9435edd8564adf0c57007443384bd3029fb4b62e9306858c662291f"
+  }
+}
