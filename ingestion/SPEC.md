@@ -56,16 +56,16 @@ The importer must be **idempotent** and produce deterministic output for a given
 
 | Upstream | Blueprint | Rule |
 |---|---|---|
-| `PROMPT.md` / `AGENTS.md` | `procedure.steps[]` + `intent` | Re-expressed as procedure; task-specific literals lifted into `slots`. Prompt text is data, scanned, never executed |
-| `servers[]` | `capabilities[]` | **Dropped as config, retained as abstract need.** Command/args/url/env/headers are discarded; capability inferred from the server's *declared tool surface* (allowlisted mapping table, reviewed) |
+| `PROMPT.md` / `AGENTS.md` | `spec.procedure.steps[]` + `spec.intent` | Re-expressed as procedure; task-specific literals lifted into `slots`. Prompt text is data, scanned, never executed |
+| `servers[]` | `spec.capabilities[]` + `security.capabilities[]` | **Dropped as config, retained as abstract need.** Command/args/url/env/headers are discarded; capability inferred from the server's *declared tool surface* (allowlisted mapping table, reviewed) |
 | `inputs[]` (`promptString`) | *dropped* | Credentials are runtime-injected secrets; never modelled in blueprints |
-| `model`, `provider`, `endpointUrl` | `modelPolicy` | Discarded; replaced with abstract requirements (`toolCalling: required`, tier chosen conservatively) |
-| author/path/revision | `provenance.upstream` | `source`, `path`, `revision`, licence, `retrievedAt`, `normalisation {lossy, dropped, toolVersion}` |
-| — | `adaptation` | Conservative default: everything `locked` until a human loosens it |
-| — | `securityClassification` | Conservative default: strictest applicable, egress `declared-capabilities-only` |
-| — | `evaluation` | Synthetic placeholder suite; seed cannot be promoted without passing evals |
+| `model`, `provider`, `endpointUrl` | `spec.modelPolicy` | Discarded; replaced with abstract requirements (`toolCalling: required`, tier chosen conservatively) |
+| author/path/revision | `provenance.sourceRefs[].upstream` + `spec.lineage.seed` + a `normalisation` entry in `provenance.transformations` | `source`, `path`, `revision`; licence + `securityValidation`; `tool`, `lossy`, `dropped` |
+| — | `spec.adaptation` | Conservative default: everything `locked` until a human loosens it |
+| — | `security.classification`, `spec.effects` | Conservative default: strictest applicable, egress `declared-capabilities-only` |
+| — | `spec.evaluation`, `attestations` | Synthetic placeholder suite; seed cannot be promoted without passing evaluation, sanitisation and security-review attestations |
 
-Result: `origin: upstream-seed`, `maturity: candidate`, `provenance.upstream.licence.status: unverified`,
+Result: `metadata.origin.type: upstream-seed`, `maturity: candidate`, `spec.lineage.seed.licence.status: unverified`,
 `securityValidation: not-run|passed|failed`.
 
 ## 5. Security validation (reject or flag)
@@ -92,9 +92,8 @@ Concrete tool wiring is a **runtime** decision; the registry never stores it.
 * Seeds start `candidate`, `unverified`, never `canonical`.
 * Promotion to canonical uses the `upstream-seed` policy: verified licence, passed security validation, passing
   evaluation, ≥ 2 human reviewers including security (see policy).
-* Evolution from a seed into a locally improved blueprint is `origin: evolved` with lineage.
+* Evolution from a seed into a locally improved blueprint is `origin.type: evolved` (`refined`) with lineage.
 
 ## 8. Not covered / open
 
-Shared capability namespace, provenance schema and evaluation-result format are pending cross-registry
-reconciliation; the mapping table (MCP tool surface → abstract capability) needs the shared namespace first.
+Shared capability namespace and evaluation-result format remain open (see docs/CROSS-REGISTRY-RECONCILIATION.md); the mapping table (MCP tool surface → abstract capability) needs the shared namespace first.

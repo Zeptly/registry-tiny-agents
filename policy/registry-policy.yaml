@@ -24,6 +24,7 @@ classes:
       minHumanReviewers: 1
       requiredReviewerRoles: [maintainer]
       recurrence: none
+      requiredAttestations: [sanitisation, evaluation, security-review]
   upstream-seed:
     admission:
       recurrence: none
@@ -36,6 +37,7 @@ classes:
       requireLicenceVerified: true
       requireSecurityValidationPassed: true
       recurrence: none
+      requiredAttestations: [sanitisation, evaluation, security-review]
   discovered:
     admission:
       recurrence: default
@@ -45,6 +47,7 @@ classes:
       minHumanReviewers: 2
       requiredReviewerRoles: [maintainer, privacy]
       recurrence: default
+      requiredAttestations: [sanitisation, evaluation, security-review]
   refined:
     admission:
       recurrence: default
@@ -55,6 +58,13 @@ classes:
       minHumanReviewers: 2
       requiredReviewerRoles: [maintainer, privacy]
       recurrence: default
+      requiredAttestations: [sanitisation, evaluation, security-review]
+
+# Isolation of synthetic content and cap on committed file size (no dumped tapes/trajectories).
+namespaces:
+  syntheticIdPrefix: "example."
+limits:
+  maxFileBytes: 262144
 
 # Tenant-privacy and no-concrete-config detectors used by `registry scan` and `registry validate`.
 privacy:
@@ -107,6 +117,6 @@ privacy:
     - { id: uuid, pattern: "\\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\b", flags: "i" }
   # A detector may be silenced for specific JSON paths only. Everything else is scanned.
   pathExemptions:
-    - { detector: uuid, pathPattern: "^provenance\\.evidence\\[\\d+\\]\\.ref$" }
+    - { detector: uuid, pathPattern: "^attestations\\[\\d+\\]\\.ref$" }
     - { detector: uuid, pathPattern: "^submissionId$" }
     - { detector: workspace-identifier, pathPattern: "^checks\\[\\d+\\]\\.kind$" }

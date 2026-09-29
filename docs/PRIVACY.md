@@ -12,12 +12,13 @@ workspace facts must not become global blueprint content. Workspace-private blue
    Slot defaults must be generic.
 3. **Aggregates only.** Recurrence is recorded as counts (`distinctWorkspaceCount`, `executionCount`,
    observation window). Workspace identifiers are never recorded — not even hashed.
-4. **Evidence by reference.** Raw sessions, tapes and trajectories stay outside Git. `provenance.evidence[]` carries
-   only `{kind, ref, digest?, outcome}`; `ref` must be a pseudonymous handle minted for promotion, not a raw tenant or
-   session identifier (exact protocol PROVISIONAL).
+4. **Evidence by reference.** Raw sessions, tapes and trajectories stay outside Git. `attestations[]` carry only
+   `{type, ref, subjectDigest, outcome?}`; `evidence://…` refs must be pseudonymous handles minted for promotion, not raw
+   tenant or session identifiers (the full Evidence Protocol is deferred). File types other than YAML/JSON/Markdown and
+   files above the policy size cap are rejected, so tapes and payload dumps cannot be committed.
 5. **Synthetic evaluation.** Eval suites must declare `dataProvenance: synthetic`.
-6. **Sanitisation report.** Each version carries `sanitisation-report.yaml`: which detectors ran, that generalisation
-   happened, and the digest of the exact `blueprint.yaml` it attests. Stale reports fail validation. The report is an
+6. **Sanitisation attestation.** Each version carries a `sanitisation` attestation pointing at `sanitisation-report.yaml`: which
+   detectors ran, that generalisation happened, bound to the artifact's exact content digest. Stale reports fail validation. The report is an
    *attestation*, never a substitute for step 7.
 7. **Independent scanner.** `registry validate` scans every key and value (and YAML comments and Markdown) of every
    file in every version directory for: forbidden keys (`command`, `args`, `env`, `url`, `provider`, `model`,

@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:zeptly:tiny-agents:schema:runtime-lock",
+  "title": "Exact runtime lock (range -> exact version + digest)",
+  "description": "Produced by the resolver; the runtime records it in evidence. Deterministic: no timestamps (the runtime stamps its own evidence).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "apiVersion",
+    "kind",
+    "entries",
+    "unresolved"
+  ],
+  "properties": {
+    "apiVersion": {
+      "const": "registry.zeptly.dev/v1alpha1"
+    },
+    "kind": {
+      "const": "RuntimeLock"
+    },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "requested",
+          "resolved"
+        ],
+        "properties": {
+          "requested": {
+            "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryRef"
+          },
+          "resolved": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "registry",
+              "id",
+              "version",
+              "digest"
+            ],
+            "properties": {
+              "registry": {
+                "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryName"
+              },
+              "id": {
+                "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryId"
+              },
+              "version": {
+                "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/semver"
+              },
+              "digest": {
+                "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digest"
+              },
+              "sealDigest": {
+                "oneOf": [
+                  {
+                    "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "maturity": {
+                "enum": [
+                  "candidate",
+                  "canonical"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "unresolved": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "requested",
+          "reason"
+        ],
+        "properties": {
+          "requested": {
+            "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryRef"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

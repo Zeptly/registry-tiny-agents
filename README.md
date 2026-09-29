@@ -6,9 +6,9 @@ Canonical Zeptly registry of **Tiny Agent Blueprints**.
 > executed → evidence captured → disposed. **Blueprints persist.** A blueprint is a reusable *construction
 > pattern* (a known-good prior the compiler adapts), not an immutable agent.
 
-**Status: foundation / candidate architecture.** Every identifier, reference, digest, evidence and index convention
-here is **PROVISIONAL** pending cross-registry reconciliation into a common Zeptly Registry Protocol. See
-[`docs/PROVISIONAL.md`](docs/PROVISIONAL.md) and [`docs/CROSS-REGISTRY-RECONCILIATION.md`](docs/CROSS-REGISTRY-RECONCILIATION.md).
+**Status: aligned with Zeptly Registry Protocol v0.1** (common envelope: `apiVersion`/`kind`/`metadata`/`spec`/`references`/`provenance`/`security`/`attestations`).
+See [`docs/PROTOCOL-ALIGNMENT.md`](docs/PROTOCOL-ALIGNMENT.md) for the rule-by-rule mapping and the interpretations that need confirmation, and
+[`docs/CROSS-REGISTRY-RECONCILIATION.md`](docs/CROSS-REGISTRY-RECONCILIATION.md) for what remains open.
 
 ## Where things are
 
@@ -16,8 +16,8 @@ here is **PROVISIONAL** pending cross-registry reconciliation into a common Zept
 |---|---|
 | `schema/` | JSON Schemas (2020-12) for blueprints, evals, sanitisation reports, submissions, lifecycle, policy, … |
 | `policy/registry-policy.yaml` | Governance thresholds/gates per provenance class, privacy detectors. **Policy, not code.** |
-| `blueprints/candidates/<id>/<version>/` | Candidate registry objects (mutable only through PRs) — empty for now |
-| `blueprints/canonical/<id>/<version>/` | Immutable canonical version directories — empty for now |
+| `blueprints/candidates/…/<version>/` | Candidate registry objects (changed only through PRs) — empty for now |
+| `blueprints/canonical/…/<version>/` | Immutable canonical version directories — empty for now |
 | `upstreams/` | Upstream source descriptors + locks (Hugging Face: **specified only, nothing imported**) |
 | `ingestion/SPEC.md` | Specification of the future upstream-ingestion pipeline |
 | `examples/registry/` | A **SYNTHETIC** example registry root (3 blueprints) that proves the architecture and drives tests |
@@ -36,6 +36,7 @@ npm run validate        # validate ./ (production) and examples/registry
 npm run index           # regenerate index/registry-index.json for both roots
 npx tsx tools/src/cli.ts seal <version-dir>            # write integrity.json
 npx tsx tools/src/cli.ts check-immutability --base origin/main
+npx tsx tools/src/cli.ts lock <root> --id <id> --range '^1.0.0' [--index <peer-index.json>...]   # exact runtime lock
 ```
 
 ## Read next

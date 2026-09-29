@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { FILES, listFilesRecursive } from "./layout.js";
+import type { Doc } from "./load.js";
 
 export const sha256 = (data: Buffer | string): string => "sha256:" + createHash("sha256").update(data).digest("hex");
 export const fileDigest = (path: string): string => sha256(readFileSync(path));
@@ -20,4 +21,27 @@ export function computeIntegrity(dir: string): { integrityVersion: string; diges
 
 export function sealDir(dir: string): void {
   writeFileSync(join(dir, FILES.integrity), JSON.stringify(computeIntegrity(dir), null, 2) + "\n");
+}
+
+/** Deterministic JSON: object keys sorted recursively, no insignificant whitespace. */
+export function canonicalJson(v: unknown): string {
+  if (Array.isArray(v)) return `[${v.map(canonicalJson).join(",")}]`;
+  if (v && typeof v === "object") {
+    const o = v as Doc;
+    return `{${Object.keys(o).sort().filter((k) => o[k] !== undefined).map((k) => `${JSON.stringify(k)}:${canonicalJson(o[k])}`).join(",")}}`;
+  }
+  return JSON.stringify(v);
+}
+
+/**
+ * The artifact `digest` (Registry Protocol: exact digest) = content identity of what attestations assess.
+ * Excludes `attestations` (they cannot contain their own subject digest) and the governance-state fields
+ * `metadata.version` / `metadata.maturity`, so promotion does not invalidate evaluations of unchanged content.
+ * The directory seal (`integrity.json`) is a separate integrity mechanism over ALL files.
+ */
+export function contentDigest(doc: Doc): string {
+  const c = JSON.parse(JSON.stringify(doc)) as Doc;
+  delete c.attestations;
+  if (c.metadata) { delete c.metadata.version; delete c.metadata.maturity; }
+  return sha256(canonicalJson(c));
 }

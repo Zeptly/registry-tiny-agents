@@ -1,14 +1,24 @@
 {
-  "indexFormat": "tiny-agent-registry-index/v0-provisional",
-  "registryPurpose": "example",
+  "apiVersion": "registry.zeptly.dev/v1alpha1",
+  "kind": "RegistryIndex",
+  "registry": "tiny-agents",
+  "purpose": "example",
   "entries": [
     {
+      "registry": "tiny-agents",
       "id": "example.request-triage",
       "version": "0.1.0",
+      "digest": "sha256:b43b3190b22d5c99a191e6ec799ca1d85aba1884d3204cc08429a2f2585f6873",
+      "sealDigest": null,
       "maturity": "candidate",
-      "origin": "evolved",
-      "provenanceClass": "discovered",
       "lifecycle": "active",
+      "origin": {
+        "type": "evolved",
+        "evolutionKind": "discovered"
+      },
+      "location": "blueprints/candidates/example.request-triage/0.1.0",
+      "synthetic": true,
+      "provenanceClass": "discovered",
       "name": "[SYNTHETIC] Inbound Request Triage",
       "taskClass": "ops.triage",
       "summary": "Classify an inbound request into a small category set and annotate it with a priority.",
@@ -16,72 +26,59 @@
         "queue.read",
         "record.annotate"
       ],
-      "skills": [],
-      "synthetic": true,
-      "path": "blueprints/candidates/example.request-triage/0.1.0",
-      "blueprintDigest": "sha256:ce9c6c105f86a8ac015ae91f3135ae330d7f704665343f871d3ceda29675fb97",
-      "sealDigest": null
+      "references": []
     },
     {
+      "registry": "tiny-agents",
       "id": "example.seed-page-reader",
       "version": "0.1.0",
+      "digest": "sha256:e6943a74356fc31169ca212eae0fd4cc9301946022978a31f7cbf93e17b5cd14",
+      "sealDigest": null,
       "maturity": "candidate",
-      "origin": "upstream-seed",
-      "provenanceClass": "upstream-seed",
       "lifecycle": "active",
+      "origin": {
+        "type": "upstream-seed",
+        "evolutionKind": null
+      },
+      "location": "blueprints/candidates/example.seed-page-reader/0.1.0",
+      "synthetic": true,
+      "provenanceClass": "upstream-seed",
       "name": "[SYNTHETIC] Seed Page Reader",
       "taskClass": "web.read",
       "summary": "Read a single web page and answer a question about it.",
       "capabilities": [
         "web.read"
       ],
-      "skills": [],
-      "synthetic": true,
-      "path": "blueprints/candidates/example.seed-page-reader/0.1.0",
-      "blueprintDigest": "sha256:7e5f36873c8585d9a204c2e629eaa2e90afa7ca2552cc7526acb9fc3756c7c01",
-      "sealDigest": null
+      "references": []
     },
     {
+      "registry": "tiny-agents",
       "id": "example.structured-summary",
       "version": "1.0.0",
+      "digest": "sha256:a4c46477e663d92b760b50ffc7b1a958780163824441a6fe7691378631f39760",
+      "sealDigest": "sha256:279b6da838ebb9812e45c7912aaf7bfe495d89bb2cc3662d6d480d893950ccf4",
       "maturity": "canonical",
-      "origin": "native",
-      "provenanceClass": "native",
       "lifecycle": "active",
+      "origin": {
+        "type": "native",
+        "evolutionKind": null
+      },
+      "location": "blueprints/canonical/example.structured-summary/1.0.0",
+      "synthetic": true,
+      "provenanceClass": "native",
       "name": "[SYNTHETIC] Structured Document Summary",
       "taskClass": "text.summarise",
       "summary": "Summarise a single document into a headline summary and a bounded list of key points.",
       "capabilities": [
         "document.read"
       ],
-      "skills": [
+      "references": [
         {
           "registry": "skills",
           "id": "synthetic.summarise-text",
           "version": "^1.0.0"
         }
-      ],
-      "synthetic": true,
-      "path": "blueprints/canonical/example.structured-summary/1.0.0",
-      "blueprintDigest": "sha256:23abb86e98e341058d31c960b00f4879624a1fd155828df6da1081f01c60798b",
-      "sealDigest": "sha256:592290fee57071b7e36195ec773b04115ba14597e5e0b2ecd1e675f3f8a4d4e7"
-    }
-  ],
-  "resolution": [
-    {
-      "id": "example.request-triage",
-      "latestActiveCanonical": null,
-      "latestActiveCandidate": "0.1.0"
-    },
-    {
-      "id": "example.seed-page-reader",
-      "latestActiveCanonical": null,
-      "latestActiveCandidate": "0.1.0"
-    },
-    {
-      "id": "example.structured-summary",
-      "latestActiveCanonical": "1.0.0",
-      "latestActiveCandidate": null
+      ]
     }
   ]
 }

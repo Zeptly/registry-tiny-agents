@@ -32,7 +32,7 @@ const addFormats: any = (addFormatsModule as any).default ?? addFormatsModule;
 
 export type SchemaName =
   | "blueprint" | "eval-suite" | "eval-result" | "sanitisation-report" | "submission" | "lifecycle"
-  | "integrity" | "promotion" | "registry-root" | "upstream-source" | "upstream-lock" | "policy" | "index";
+  | "integrity" | "promotion" | "registry-root" | "upstream-source" | "upstream-lock" | "policy" | "index" | "runtime-lock";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let ajv: any;

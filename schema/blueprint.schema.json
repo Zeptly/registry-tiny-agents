@@ -1,412 +1,1127 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:zeptly:tiny-agents:schema:blueprint",
-  "title": "Tiny Agent Blueprint (v0 PROVISIONAL)",
-  "description": "A reusable construction pattern for a Tiny Agent. NOT a running agent, NOT immutable at compile time: the future compiler adapts it within the bounds declared in `adaptation`. Compilation is a runtime event and is not a registry state.",
+  "title": "Tiny Agent Blueprint (Zeptly Registry Protocol v0.1 envelope)",
+  "description": "Common envelope + tiny-agent `spec`. A blueprint is a reusable construction pattern, not a running agent. Compilation is a runtime event, not a registry state.",
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "apiVersion", "kind", "id", "version", "maturity", "origin", "metadata", "intent",
-    "interface", "procedure", "slots", "adaptation", "skills", "capabilities", "modelPolicy",
-    "contextPolicy", "executionConstraints", "securityClassification", "compatibility",
-    "provenance", "evaluation"
+    "apiVersion",
+    "kind",
+    "metadata",
+    "spec",
+    "references",
+    "provenance",
+    "security",
+    "attestations"
   ],
   "properties": {
-    "apiVersion": { "const": "tiny-agent-blueprint/v0-provisional" },
-    "kind": { "const": "TinyAgentBlueprint" },
-    "id": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryId" },
-    "version": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/semver" },
-    "maturity": { "enum": ["candidate", "canonical"] },
-    "origin": { "enum": ["native", "upstream-seed", "evolved"] },
-
+    "apiVersion": {
+      "const": "registry.zeptly.dev/v1alpha1"
+    },
+    "kind": {
+      "const": "TinyAgentBlueprint"
+    },
     "metadata": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "description", "taskClass", "synthetic"],
+      "required": [
+        "id",
+        "version",
+        "registry",
+        "origin",
+        "maturity",
+        "synthetic"
+      ],
+      "description": "Protocol v0.1 metadata. `lifecycle` is intentionally NOT stored here: it is an append-only overlay (lifecycle.yaml) so immutable content cannot go stale.",
       "properties": {
-        "name": { "type": "string", "minLength": 3, "maxLength": 120 },
-        "description": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/longText" },
-        "taskClass": {
-          "description": "Coarse task class used for resolution. Vocabulary not yet reconciled.",
-          "type": "string", "pattern": "^[a-z][a-z0-9]*(\\.[a-z][a-z0-9-]*)*$", "maxLength": 80
+        "id": {
+          "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryId"
         },
-        "labels": { "type": "array", "maxItems": 16, "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,39}$" } },
-        "maintainers": {
-          "type": "array", "maxItems": 8,
-          "items": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/actor" }
+        "version": {
+          "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/semver"
         },
-        "synthetic": { "type": "boolean", "description": "true = fabricated example content, never production." }
+        "registry": {
+          "const": "tiny-agents"
+        },
+        "origin": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type"
+          ],
+          "properties": {
+            "type": {
+              "enum": [
+                "native",
+                "upstream-seed",
+                "evolved"
+              ]
+            },
+            "evolution": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "kind",
+                "sourceRefs"
+              ],
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "discovered",
+                    "refined"
+                  ]
+                },
+                "sourceRefs": {
+                  "type": "array",
+                  "maxItems": 8,
+                  "items": {
+                    "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryRef"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "maturity": {
+          "enum": [
+            "candidate",
+            "canonical"
+          ]
+        },
+        "synthetic": {
+          "type": "boolean",
+          "description": "Local extension: true = fabricated example content. Never allowed in a production root."
+        }
       }
     },
-
-    "intent": {
-      "description": "Intent/signature used for blueprint resolution. Describes the class of task, never a specific tenant task.",
+    "spec": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["summary", "appliesWhen"],
+      "required": [
+        "descriptor",
+        "intent",
+        "interface",
+        "procedure",
+        "slots",
+        "adaptation",
+        "skills",
+        "capabilities",
+        "effects",
+        "modelPolicy",
+        "contextPolicy",
+        "executionConstraints",
+        "compatibility",
+        "lineage",
+        "evaluation"
+      ],
       "properties": {
-        "summary": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText" },
-        "appliesWhen": { "type": "array", "minItems": 1, "maxItems": 12, "items": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText" } },
-        "doesNotApplyWhen": { "type": "array", "maxItems": 12, "items": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText" } }
-      }
-    },
-
-    "interface": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["inputs", "outputs"],
-      "properties": {
-        "inputs": { "type": "array", "maxItems": 24, "items": { "$ref": "#/$defs/inputSpec" } },
-        "outputs": { "type": "array", "minItems": 1, "maxItems": 24, "items": { "$ref": "#/$defs/outputSpec" } }
-      }
-    },
-
-    "procedure": {
-      "description": "The reusable procedure. Instructions may reference slots as {{slot.<name>}}; nothing tenant-specific belongs here.",
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["steps"],
-      "properties": {
-        "steps": {
-          "type": "array", "minItems": 1, "maxItems": 40,
+        "intent": {
+          "description": "Intent/signature used for blueprint resolution. Describes the class of task, never a specific tenant task.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "summary",
+            "appliesWhen"
+          ],
+          "properties": {
+            "summary": {
+              "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText"
+            },
+            "appliesWhen": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 12,
+              "items": {
+                "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText"
+              }
+            },
+            "doesNotApplyWhen": {
+              "type": "array",
+              "maxItems": 12,
+              "items": {
+                "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText"
+              }
+            }
+          }
+        },
+        "interface": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "inputs",
+            "outputs"
+          ],
+          "properties": {
+            "inputs": {
+              "type": "array",
+              "maxItems": 24,
+              "items": {
+                "$ref": "#/$defs/inputSpec"
+              }
+            },
+            "outputs": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 24,
+              "items": {
+                "$ref": "#/$defs/outputSpec"
+              }
+            }
+          }
+        },
+        "procedure": {
+          "description": "The reusable procedure. Instructions may reference slots as {{slot.<name>}}; nothing tenant-specific belongs here.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "steps"
+          ],
+          "properties": {
+            "steps": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 40,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "id",
+                  "instruction"
+                ],
+                "properties": {
+                  "id": {
+                    "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/key"
+                  },
+                  "instruction": {
+                    "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/longText"
+                  },
+                  "usesCapabilities": {
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                      "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/key"
+                    }
+                  },
+                  "usesSkills": {
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                      "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/key"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "slots": {
+          "description": "Explicit adaptation slots: the only places where task-specific values are bound at compile time. Slot values are NEVER stored in the registry; defaults must be generic.",
+          "type": "array",
+          "maxItems": 24,
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["id", "instruction"],
+            "required": [
+              "name",
+              "description",
+              "type",
+              "required"
+            ],
             "properties": {
-              "id": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/key" },
-              "instruction": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/longText" },
-              "usesCapabilities": { "type": "array", "uniqueItems": true, "items": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/key" } },
-              "usesSkills": { "type": "array", "uniqueItems": true, "items": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/key" } }
-            }
-          }
-        }
-      }
-    },
-
-    "slots": {
-      "description": "Explicit adaptation slots: the only places where task-specific values are bound at compile time. Slot values are NEVER stored in the registry; defaults must be generic.",
-      "type": "array", "maxItems": 24,
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["name", "description", "type", "required"],
-        "properties": {
-          "name": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/key" },
-          "description": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText" },
-          "type": { "enum": ["string", "text", "integer", "number", "boolean", "enum", "string-list"] },
-          "required": { "type": "boolean" },
-          "enum": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "maxLength": 80 } },
-          "default": { "type": ["string", "integer", "number", "boolean", "array"], "items": { "type": "string", "maxLength": 80 } }
-        }
-      }
-    },
-
-    "adaptation": {
-      "description": "Compiler contract. Every step, slot, skill and capability must be classified exactly once as mayAlter, mustPreserve or locked.",
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["mayAlter", "mustPreserve", "locked"],
-      "properties": {
-        "mayAlter": {
-          "type": "array", "maxItems": 80,
-          "items": {
-            "type": "object", "additionalProperties": false,
-            "required": ["target", "operations", "bounds"],
-            "properties": {
-              "target": { "$ref": "#/$defs/adaptationTarget" },
-              "operations": {
-                "type": "array", "minItems": 1, "uniqueItems": true,
-                "items": { "enum": ["reword", "reorder", "insert-before", "insert-after", "remove", "bind", "tighten", "substitute-equivalent"] }
+              "name": {
+                "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/key"
               },
-              "bounds": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText" }
-            }
-          }
-        },
-        "mustPreserve": {
-          "type": "array", "maxItems": 80,
-          "items": {
-            "type": "object", "additionalProperties": false,
-            "required": ["target", "invariant"],
-            "properties": {
-              "target": { "$ref": "#/$defs/adaptationTarget" },
-              "invariant": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText" }
-            }
-          }
-        },
-        "locked": {
-          "type": "array", "maxItems": 80,
-          "items": {
-            "type": "object", "additionalProperties": false,
-            "required": ["target", "reason"],
-            "properties": {
-              "target": { "$ref": "#/$defs/adaptationTarget" },
-              "reason": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText" }
-            }
-          }
-        }
-      }
-    },
-
-    "skills": {
-      "description": "References to reusable Skill Blueprints. Skills are never inlined. Reference serialisation is PROVISIONAL (structured on purpose).",
-      "type": "array", "maxItems": 24,
-      "items": {
-        "type": "object", "additionalProperties": false,
-        "required": ["key", "ref", "role", "required"],
-        "properties": {
-          "key": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/key" },
-          "ref": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryRef" },
-          "role": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText" },
-          "required": { "type": "boolean" }
-        }
-      }
-    },
-
-    "capabilities": {
-      "description": "ABSTRACT capability requirements. No commands, endpoints, credentials or concrete provider/MCP configuration. The runtime maps capabilities to concrete tools.",
-      "type": "array", "maxItems": 24,
-      "items": {
-        "type": "object", "additionalProperties": false,
-        "required": ["key", "capability", "purpose", "required", "effect"],
-        "properties": {
-          "key": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/key" },
-          "capability": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/capabilityName" },
-          "purpose": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText" },
-          "required": { "type": "boolean" },
-          "effect": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/effectClass" },
-          "operations": {
-            "description": "Abstract operation names the blueprint needs (not tool names).",
-            "type": "array", "uniqueItems": true, "maxItems": 16,
-            "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,47}$" }
-          },
-          "approval": { "enum": ["none", "required"] },
-          "compensation": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText" }
-        }
-      }
-    },
-
-    "modelPolicy": {
-      "description": "Abstract model REQUIREMENTS. Concrete model IDs / providers are forbidden.",
-      "type": "object", "additionalProperties": false,
-      "required": ["reasoningTier", "toolCalling", "modalities"],
-      "properties": {
-        "reasoningTier": { "enum": ["basic", "standard", "advanced"] },
-        "toolCalling": { "enum": ["none", "optional", "required"] },
-        "structuredOutput": { "enum": ["none", "optional", "required"] },
-        "modalities": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["text", "image", "audio", "document"] } },
-        "minContextTokens": { "type": "integer", "minimum": 1024, "maximum": 10000000 },
-        "costTier": { "enum": ["low", "medium", "high"] },
-        "latencyTier": { "enum": ["interactive", "standard", "batch"] }
-      }
-    },
-
-    "contextPolicy": {
-      "type": "object", "additionalProperties": false,
-      "required": ["memory", "untrustedInputHandling"],
-      "properties": {
-        "memory": { "enum": ["none", "scratch-only"], "description": "Tiny Agents are ephemeral; no persistent memory across runs." },
-        "untrustedInputHandling": { "enum": ["isolate-and-quote", "sanitise-then-use", "not-applicable"] },
-        "maxContextTokens": { "type": "integer", "minimum": 1024, "maximum": 10000000 },
-        "provenanceTagging": { "type": "boolean" }
-      }
-    },
-
-    "executionConstraints": {
-      "type": "object", "additionalProperties": false,
-      "required": ["maxSteps", "maxToolCalls", "maxWallClockSeconds", "onLimit"],
-      "properties": {
-        "maxSteps": { "type": "integer", "minimum": 1, "maximum": 1000 },
-        "maxToolCalls": { "type": "integer", "minimum": 0, "maximum": 5000 },
-        "maxWallClockSeconds": { "type": "integer", "minimum": 1, "maximum": 86400 },
-        "maxTokens": { "type": "integer", "minimum": 1 },
-        "maxRetries": { "type": "integer", "minimum": 0, "maximum": 10 },
-        "onLimit": { "enum": ["fail", "return-partial"] },
-        "terminationConditions": { "type": "array", "maxItems": 8, "items": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText" } }
-      }
-    },
-
-    "securityClassification": {
-      "type": "object", "additionalProperties": false,
-      "required": ["dataSensitivity", "maxEffect", "egress"],
-      "properties": {
-        "dataSensitivity": { "enum": ["public", "internal", "confidential"], "description": "Sensitivity class of data the blueprint is designed to handle." },
-        "maxEffect": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/effectClass" },
-        "egress": { "enum": ["none", "declared-capabilities-only"] }
-      }
-    },
-
-    "compatibility": {
-      "type": "object", "additionalProperties": false,
-      "required": ["runtimeContract"],
-      "properties": {
-        "runtimeContract": { "const": "tiny-agent-runtime/v0-provisional" },
-        "notes": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText" }
-      }
-    },
-
-    "provenance": { "$ref": "#/$defs/provenance" },
-
-    "evaluation": {
-      "type": "object", "additionalProperties": false,
-      "required": ["suite", "gates"],
-      "properties": {
-        "suite": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/relPath" },
-        "results": { "type": "array", "maxItems": 20, "items": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/relPath" } },
-        "gates": {
-          "type": "object", "additionalProperties": false,
-          "required": ["minPassRate"],
-          "properties": { "minPassRate": { "type": "number", "minimum": 0, "maximum": 1 } }
-        }
-      }
-    }
-  },
-
-  "allOf": [
-    {
-      "if": { "properties": { "origin": { "const": "native" } }, "required": ["origin"] },
-      "then": { "properties": { "provenance": { "required": ["native"], "not": { "anyOf": [{ "required": ["upstream"] }, { "required": ["evolution"] }] } } } }
-    },
-    {
-      "if": { "properties": { "origin": { "const": "upstream-seed" } }, "required": ["origin"] },
-      "then": { "properties": { "provenance": { "required": ["upstream"], "not": { "anyOf": [{ "required": ["native"] }, { "required": ["evolution"] }] } } } }
-    },
-    {
-      "if": { "properties": { "origin": { "const": "evolved" } }, "required": ["origin"] },
-      "then": { "properties": { "provenance": { "required": ["evolution"], "not": { "anyOf": [{ "required": ["native"] }, { "required": ["upstream"] }] } } } }
-    }
-  ],
-
-  "$defs": {
-    "adaptationTarget": {
-      "type": "object", "additionalProperties": false,
-      "required": ["kind"],
-      "properties": {
-        "kind": { "enum": ["step", "slot", "skill", "capability", "interface", "modelPolicy", "contextPolicy", "executionConstraints", "securityClassification", "evaluation"] },
-        "ref": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/key" }
-      }
-    },
-    "inputSpec": {
-      "type": "object", "additionalProperties": false,
-      "required": ["name", "description", "type", "required", "trust"],
-      "properties": {
-        "name": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/key" },
-        "description": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText" },
-        "type": { "enum": ["string", "text", "integer", "number", "boolean", "object", "array"] },
-        "required": { "type": "boolean" },
-        "trust": { "enum": ["trusted", "untrusted"] }
-      }
-    },
-    "outputSpec": {
-      "type": "object", "additionalProperties": false,
-      "required": ["name", "description", "type", "required"],
-      "properties": {
-        "name": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/key" },
-        "description": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText" },
-        "type": { "enum": ["string", "text", "integer", "number", "boolean", "object", "array"] },
-        "required": { "type": "boolean" }
-      }
-    },
-    "evidenceRef": {
-      "description": "PROVISIONAL external evidence reference. A common Zeptly Evidence Protocol may replace it. References only: raw sessions/tapes/trajectories stay outside Git. `ref` must be a global-safe, pseudonymous handle minted for promotion purposes, never a raw tenant/session identifier.",
-      "type": "object", "additionalProperties": false,
-      "required": ["kind", "ref", "outcome"],
-      "properties": {
-        "kind": { "enum": ["session", "tape", "trajectory", "checkpoint", "evaluation-run"] },
-        "ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9:_./-]{7,199}$" },
-        "digest": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digest" },
-        "outcome": { "enum": ["success", "partial", "failure"] },
-        "synthetic": { "type": "boolean" }
-      }
-    },
-    "provenance": {
-      "type": "object", "additionalProperties": false,
-      "required": ["authoring", "sanitisation"],
-      "properties": {
-        "authoring": {
-          "type": "object", "additionalProperties": false,
-          "required": ["kind", "summary"],
-          "properties": {
-            "kind": { "enum": ["human", "agent", "hybrid"] },
-            "summary": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText" }
-          }
-        },
-        "native": {
-          "type": "object", "additionalProperties": false, "required": ["rationale"],
-          "properties": { "rationale": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText" } }
-        },
-        "upstream": {
-          "description": "Seed provenance. The upstream source is resolved via <root>/upstreams/<source>/source.yaml; blueprints never embed URLs.",
-          "type": "object", "additionalProperties": false,
-          "required": ["source", "path", "revision", "licence", "retrievedAt", "normalisation"],
-          "properties": {
-            "source": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryId" },
-            "path": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]*$", "maxLength": 200 },
-            "revision": { "type": "string", "pattern": "^[A-Za-z0-9._-]{6,64}$" },
-            "licence": {
-              "type": "object", "additionalProperties": false, "required": ["spdx", "status"],
-              "properties": {
-                "spdx": { "type": "string", "maxLength": 64 },
-                "status": { "enum": ["unverified", "verified"] }
+              "description": {
+                "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText"
+              },
+              "type": {
+                "enum": [
+                  "string",
+                  "text",
+                  "integer",
+                  "number",
+                  "boolean",
+                  "enum",
+                  "string-list"
+                ]
+              },
+              "required": {
+                "type": "boolean"
+              },
+              "enum": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "maxLength": 80
+                }
+              },
+              "default": {
+                "type": [
+                  "string",
+                  "integer",
+                  "number",
+                  "boolean",
+                  "array"
+                ],
+                "items": {
+                  "type": "string",
+                  "maxLength": 80
+                }
               }
-            },
-            "retrievedAt": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/dateTime" },
-            "normalisation": {
-              "type": "object", "additionalProperties": false, "required": ["lossy", "dropped", "toolVersion"],
-              "properties": {
-                "lossy": { "type": "boolean" },
-                "dropped": { "type": "array", "items": { "type": "string", "maxLength": 80 } },
-                "toolVersion": { "type": "string", "maxLength": 40 }
-              }
-            },
-            "securityValidation": { "enum": ["not-run", "passed", "failed"] }
+            }
           }
         },
-        "evolution": {
-          "type": "object", "additionalProperties": false,
-          "required": ["kind", "recurrence", "method"],
+        "adaptation": {
+          "description": "Compiler contract. Every step, slot, skill and capability must be classified exactly once as mayAlter, mustPreserve or locked.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mayAlter",
+            "mustPreserve",
+            "locked"
+          ],
           "properties": {
-            "kind": { "enum": ["discovered", "refined"] },
-            "parents": {
-              "description": "Blueprints this evolved from. Required for 'refined'.",
-              "type": "array", "maxItems": 8,
+            "mayAlter": {
+              "type": "array",
+              "maxItems": 80,
               "items": {
-                "type": "object", "additionalProperties": false, "required": ["id", "version"],
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "target",
+                  "operations",
+                  "bounds"
+                ],
                 "properties": {
-                  "id": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryId" },
-                  "version": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/semver" }
+                  "target": {
+                    "$ref": "#/$defs/adaptationTarget"
+                  },
+                  "operations": {
+                    "type": "array",
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": {
+                      "enum": [
+                        "reword",
+                        "reorder",
+                        "insert-before",
+                        "insert-after",
+                        "remove",
+                        "bind",
+                        "tighten",
+                        "substitute-equivalent"
+                      ]
+                    }
+                  },
+                  "bounds": {
+                    "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText"
+                  }
+                }
+              }
+            },
+            "mustPreserve": {
+              "type": "array",
+              "maxItems": 80,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "target",
+                  "invariant"
+                ],
+                "properties": {
+                  "target": {
+                    "$ref": "#/$defs/adaptationTarget"
+                  },
+                  "invariant": {
+                    "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText"
+                  }
+                }
+              }
+            },
+            "locked": {
+              "type": "array",
+              "maxItems": 80,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "target",
+                  "reason"
+                ],
+                "properties": {
+                  "target": {
+                    "$ref": "#/$defs/adaptationTarget"
+                  },
+                  "reason": {
+                    "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "skills": {
+          "description": "References to reusable Skill Blueprints. Skills are never inlined. References are structured Registry Protocol v0.1 objects.",
+          "type": "array",
+          "maxItems": 24,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "key",
+              "ref",
+              "role",
+              "required"
+            ],
+            "properties": {
+              "key": {
+                "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/key"
+              },
+              "ref": {
+                "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryRef"
+              },
+              "role": {
+                "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText"
+              },
+              "required": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "capabilities": {
+          "description": "ABSTRACT capability requirements. No commands, endpoints, credentials or concrete provider/MCP configuration. The runtime maps capabilities to concrete tools.",
+          "type": "array",
+          "maxItems": 24,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "key",
+              "capability",
+              "purpose",
+              "required",
+              "effect"
+            ],
+            "properties": {
+              "key": {
+                "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/key"
+              },
+              "capability": {
+                "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/capabilityName"
+              },
+              "purpose": {
+                "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText"
+              },
+              "required": {
+                "type": "boolean"
+              },
+              "effect": {
+                "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/effectClass"
+              },
+              "operations": {
+                "description": "Abstract operation names the blueprint needs (not tool names).",
+                "type": "array",
+                "uniqueItems": true,
+                "maxItems": 16,
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_]{0,47}$"
+                }
+              },
+              "approval": {
+                "enum": [
+                  "none",
+                  "required"
+                ]
+              },
+              "compensation": {
+                "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText"
+              }
+            }
+          }
+        },
+        "modelPolicy": {
+          "description": "Abstract model REQUIREMENTS. Concrete model IDs / providers are forbidden.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "reasoningTier",
+            "toolCalling",
+            "modalities"
+          ],
+          "properties": {
+            "reasoningTier": {
+              "enum": [
+                "basic",
+                "standard",
+                "advanced"
+              ]
+            },
+            "toolCalling": {
+              "enum": [
+                "none",
+                "optional",
+                "required"
+              ]
+            },
+            "structuredOutput": {
+              "enum": [
+                "none",
+                "optional",
+                "required"
+              ]
+            },
+            "modalities": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "text",
+                  "image",
+                  "audio",
+                  "document"
+                ]
+              }
+            },
+            "minContextTokens": {
+              "type": "integer",
+              "minimum": 1024,
+              "maximum": 10000000
+            },
+            "costTier": {
+              "enum": [
+                "low",
+                "medium",
+                "high"
+              ]
+            },
+            "latencyTier": {
+              "enum": [
+                "interactive",
+                "standard",
+                "batch"
+              ]
+            }
+          }
+        },
+        "contextPolicy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "memory",
+            "untrustedInputHandling"
+          ],
+          "properties": {
+            "memory": {
+              "enum": [
+                "none",
+                "scratch-only"
+              ],
+              "description": "Tiny Agents are ephemeral; no persistent memory across runs."
+            },
+            "untrustedInputHandling": {
+              "enum": [
+                "isolate-and-quote",
+                "sanitise-then-use",
+                "not-applicable"
+              ]
+            },
+            "maxContextTokens": {
+              "type": "integer",
+              "minimum": 1024,
+              "maximum": 10000000
+            },
+            "provenanceTagging": {
+              "type": "boolean"
+            }
+          }
+        },
+        "executionConstraints": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "maxSteps",
+            "maxToolCalls",
+            "maxWallClockSeconds",
+            "onLimit"
+          ],
+          "properties": {
+            "maxSteps": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "maxToolCalls": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 5000
+            },
+            "maxWallClockSeconds": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 86400
+            },
+            "maxTokens": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "maxRetries": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10
+            },
+            "onLimit": {
+              "enum": [
+                "fail",
+                "return-partial"
+              ]
+            },
+            "terminationConditions": {
+              "type": "array",
+              "maxItems": 8,
+              "items": {
+                "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText"
+              }
+            }
+          }
+        },
+        "compatibility": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "runtimeContract"
+          ],
+          "properties": {
+            "runtimeContract": {
+              "const": "tiny-agent-runtime/v0-provisional"
+            },
+            "notes": {
+              "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText"
+            }
+          }
+        },
+        "descriptor": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "description",
+            "taskClass"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 120
+            },
+            "description": {
+              "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/longText"
+            },
+            "taskClass": {
+              "description": "Coarse task class used for resolution. Vocabulary not yet reconciled.",
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9]*(\\.[a-z][a-z0-9-]*)*$",
+              "maxLength": 80
+            },
+            "labels": {
+              "type": "array",
+              "maxItems": 16,
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9-]{0,39}$"
+              }
+            }
+          }
+        },
+        "effects": {
+          "description": "Class-specific effect bounds. The classification itself lives in the common `security` envelope and is never alterable by the compiler.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "maxEffect",
+            "egress"
+          ],
+          "properties": {
+            "maxEffect": {
+              "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/effectClass"
+            },
+            "egress": {
+              "enum": [
+                "none",
+                "declared-capabilities-only"
+              ]
+            }
+          }
+        },
+        "evaluation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "suite",
+            "gates"
+          ],
+          "properties": {
+            "suite": {
+              "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/relPath"
+            },
+            "gates": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "minPassRate"
+              ],
+              "properties": {
+                "minPassRate": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              }
+            }
+          }
+        },
+        "lineage": {
+          "description": "Tiny-agent generalisation semantics: exactly one of native / seed / recurrence, matching metadata.origin.type. Aggregate counts only; never workspace identifiers.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "native": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "rationale"
+              ],
+              "properties": {
+                "rationale": {
+                  "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText"
+                }
+              }
+            },
+            "seed": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "licence"
+              ],
+              "properties": {
+                "licence": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "spdx",
+                    "status"
+                  ],
+                  "properties": {
+                    "spdx": {
+                      "type": "string",
+                      "maxLength": 64
+                    },
+                    "status": {
+                      "enum": [
+                        "unverified",
+                        "verified"
+                      ]
+                    }
+                  }
+                },
+                "securityValidation": {
+                  "enum": [
+                    "not-run",
+                    "passed",
+                    "failed"
+                  ]
                 }
               }
             },
             "recurrence": {
               "description": "Aggregate counts only. Workspace identifiers are never recorded.",
-              "type": "object", "additionalProperties": false,
-              "required": ["distinctWorkspaceCount", "executionCount"],
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "distinctWorkspaceCount",
+                "executionCount"
+              ],
               "properties": {
-                "distinctWorkspaceCount": { "type": "integer", "minimum": 0 },
-                "executionCount": { "type": "integer", "minimum": 0 },
+                "distinctWorkspaceCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "executionCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
                 "observationWindow": {
-                  "type": "object", "additionalProperties": false, "required": ["start", "end"],
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "start",
+                    "end"
+                  ],
                   "properties": {
-                    "start": { "type": "string", "format": "date" },
-                    "end": { "type": "string", "format": "date" }
+                    "start": {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    "end": {
+                      "type": "string",
+                      "format": "date"
+                    }
                   }
                 }
               }
-            },
-            "method": {
-              "type": "object", "additionalProperties": false, "required": ["name", "version"],
-              "properties": {
-                "name": { "type": "string", "maxLength": 80 },
-                "version": { "type": "string", "maxLength": 40 }
+            }
+          }
+        }
+      }
+    },
+    "references": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryRef"
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "createdAt",
+        "authors",
+        "sourceRefs",
+        "transformations"
+      ],
+      "properties": {
+        "createdAt": {
+          "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/dateTime"
+        },
+        "authors": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "identity"
+            ],
+            "properties": {
+              "kind": {
+                "enum": [
+                  "human",
+                  "agent",
+                  "hybrid"
+                ]
+              },
+              "identity": {
+                "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/actor"
               }
             }
           }
         },
-        "evidence": { "type": "array", "maxItems": 50, "items": { "$ref": "#/$defs/evidenceRef" } },
-        "sanitisation": {
-          "type": "object", "additionalProperties": false, "required": ["report"],
-          "properties": { "report": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/relPath" } }
+        "sourceRefs": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "oneOf": [
+              {
+                "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryRef"
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "upstream"
+                ],
+                "properties": {
+                  "upstream": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "source",
+                      "path",
+                      "revision"
+                    ],
+                    "properties": {
+                      "source": {
+                        "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryId"
+                      },
+                      "path": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]*$",
+                        "maxLength": 200
+                      },
+                      "revision": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9._-]{6,64}$"
+                      },
+                      "digest": {
+                        "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digest"
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "transformations": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "tool"
+            ],
+            "properties": {
+              "type": {
+                "enum": [
+                  "normalisation",
+                  "generalisation",
+                  "clustering",
+                  "sanitisation"
+                ]
+              },
+              "tool": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "version"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "maxLength": 80
+                  },
+                  "version": {
+                    "type": "string",
+                    "maxLength": 40
+                  }
+                }
+              },
+              "lossy": {
+                "type": "boolean"
+              },
+              "dropped": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "maxLength": 80
+                }
+              },
+              "summary": {
+                "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText"
+              }
+            }
+          }
+        }
+      }
+    },
+    "security": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "classification",
+        "capabilities",
+        "approvals"
+      ],
+      "properties": {
+        "classification": {
+          "enum": [
+            "public",
+            "internal",
+            "confidential",
+            "restricted"
+          ],
+          "description": "Vocabulary not fixed by Protocol v0.1; extend deliberately. The compiler/runtime must never elevate or silently alter it."
+        },
+        "capabilities": {
+          "type": "array",
+          "maxItems": 24,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "capability",
+              "effect"
+            ],
+            "properties": {
+              "capability": {
+                "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/capabilityName"
+              },
+              "effect": {
+                "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/effectClass"
+              }
+            }
+          }
+        },
+        "approvals": {
+          "description": "Runtime approval requirements (derived from spec.capabilities[].approval).",
+          "type": "array",
+          "maxItems": 24,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "capability",
+              "requirement"
+            ],
+            "properties": {
+              "capability": {
+                "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/capabilityName"
+              },
+              "requirement": {
+                "const": "required"
+              }
+            }
+          }
+        }
+      }
+    },
+    "attestations": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "$ref": "#/$defs/attestation"
+      }
+    }
+  },
+  "$defs": {
+    "adaptationTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "step",
+            "slot",
+            "skill",
+            "capability",
+            "interface",
+            "modelPolicy",
+            "contextPolicy",
+            "executionConstraints",
+            "security",
+            "evaluation"
+          ]
+        },
+        "ref": {
+          "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/key"
+        }
+      }
+    },
+    "inputSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "description",
+        "type",
+        "required",
+        "trust"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/key"
+        },
+        "description": {
+          "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText"
+        },
+        "type": {
+          "enum": [
+            "string",
+            "text",
+            "integer",
+            "number",
+            "boolean",
+            "object",
+            "array"
+          ]
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "trust": {
+          "enum": [
+            "trusted",
+            "untrusted"
+          ]
+        }
+      }
+    },
+    "outputSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "description",
+        "type",
+        "required"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/key"
+        },
+        "description": {
+          "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText"
+        },
+        "type": {
+          "enum": [
+            "string",
+            "text",
+            "integer",
+            "number",
+            "boolean",
+            "object",
+            "array"
+          ]
+        },
+        "required": {
+          "type": "boolean"
+        }
+      }
+    },
+    "attestation": {
+      "description": "Digest-bound attestation. `subjectDigest` is the content digest of the artifact it assessed. Types sanitisation/evaluation reference an in-directory document (file:<path>); others use external evidence pointers (evidence://\u2026, full Evidence Protocol deferred).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "ref",
+        "subjectDigest"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "sanitisation",
+            "evaluation",
+            "security-review",
+            "recurrence"
+          ]
+        },
+        "ref": {
+          "type": "string",
+          "pattern": "^(file:[A-Za-z0-9][A-Za-z0-9._/-]*|evidence://[A-Za-z0-9][A-Za-z0-9._~:/-]{3,199})$"
+        },
+        "subjectDigest": {
+          "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digest"
+        },
+        "outcome": {
+          "enum": [
+            "pass",
+            "fail"
+          ]
         }
       }
     }

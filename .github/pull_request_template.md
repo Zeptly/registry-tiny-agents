@@ -13,7 +13,7 @@
 ## Privacy and provenance checklist
 
 - [ ] No workspace identifiers, tenant content, credentials, endpoints, concrete MCP commands or model IDs
-- [ ] Sanitisation report present and bound to the current `blueprint.yaml` digest
+- [ ] Attestations present and bound to the current content digest (not stale)
 - [ ] Evidence is by reference only; no raw sessions/tapes/trajectories
 - [ ] Any example content is unmistakably SYNTHETIC
 - [ ] Published canonical directories untouched (except `lifecycle.yaml` appends)
@@ -24,4 +24,4 @@
 
 ## Cross-Registry Reconciliation Required
 
-<!-- List any provisional convention this PR touches; see docs/CROSS-REGISTRY-RECONCILIATION.md -->
+<!-- Items still open or interpreted: docs/CROSS-REGISTRY-RECONCILIATION.md and docs/PROTOCOL-ALIGNMENT.md -->

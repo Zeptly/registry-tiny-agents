@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:zeptly:tiny-agents:schema:upstream-source",
-  "title": "Upstream source descriptor (PROVISIONAL)",
+  "title": "Upstream source descriptor (registry-local format)",
   "description": "Describes an upstream catalogue. URLs live here, never in blueprints. Ingestion is SPECIFICATION ONLY; nothing is imported.",
   "type": "object",
   "additionalProperties": false,

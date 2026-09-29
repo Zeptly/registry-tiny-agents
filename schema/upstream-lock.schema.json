@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:zeptly:tiny-agents:schema:upstream-lock",
-  "title": "Upstream lock (PROVISIONAL)",
+  "title": "Upstream lock (registry-local format)",
   "type": "object",
   "additionalProperties": false,
   "required": ["lockVersion", "source", "pinnedRevision", "entries"],

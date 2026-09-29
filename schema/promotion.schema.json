@@ -1,29 +1,94 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:zeptly:tiny-agents:schema:promotion",
-  "title": "Promotion record (PROVISIONAL)",
+  "title": "Promotion record (registry-local format)",
   "description": "Written by the promotion PR. Records what was decided and which policy was applied.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["promotionVersion", "synthetic", "promotedFrom", "decidedAt", "policyVersion", "provenanceClass", "reviewers", "gatesChecked"],
+  "required": [
+    "promotionVersion",
+    "synthetic",
+    "promotedFrom",
+    "decidedAt",
+    "policyVersion",
+    "provenanceClass",
+    "reviewers",
+    "gatesChecked",
+    "subjectDigest"
+  ],
   "properties": {
-    "promotionVersion": { "const": "promotion/v0-provisional" },
-    "synthetic": { "type": "boolean" },
-    "promotedFrom": {
-      "type": "object", "additionalProperties": false, "required": ["maturity", "version"],
-      "properties": { "maturity": { "const": "candidate" }, "version": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/semver" } }
+    "promotionVersion": {
+      "const": "promotion/v1alpha1"
     },
-    "decidedAt": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/dateTime" },
-    "policyVersion": { "type": "integer", "minimum": 0 },
-    "provenanceClass": { "enum": ["native", "upstream-seed", "discovered", "refined"] },
+    "synthetic": {
+      "type": "boolean"
+    },
+    "promotedFrom": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "maturity",
+        "version"
+      ],
+      "properties": {
+        "maturity": {
+          "const": "candidate"
+        },
+        "version": {
+          "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/semver"
+        }
+      }
+    },
+    "decidedAt": {
+      "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/dateTime"
+    },
+    "policyVersion": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "provenanceClass": {
+      "enum": [
+        "native",
+        "upstream-seed",
+        "discovered",
+        "refined"
+      ]
+    },
     "reviewers": {
       "type": "array",
       "items": {
-        "type": "object", "additionalProperties": false, "required": ["identity", "role"],
-        "properties": { "identity": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/actor" }, "role": { "enum": ["maintainer", "security", "privacy"] } }
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "identity",
+          "role"
+        ],
+        "properties": {
+          "identity": {
+            "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/actor"
+          },
+          "role": {
+            "enum": [
+              "maintainer",
+              "security",
+              "privacy"
+            ]
+          }
+        }
       }
     },
-    "gatesChecked": { "type": "array", "items": { "type": "string", "maxLength": 80 } },
-    "notes": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText" }
+    "gatesChecked": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 80
+      }
+    },
+    "notes": {
+      "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText"
+    },
+    "subjectDigest": {
+      "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digest"
+    }
   }
 }

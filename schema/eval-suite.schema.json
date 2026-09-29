@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:zeptly:tiny-agents:schema:eval-suite",
-  "title": "Blueprint evaluation suite (PROVISIONAL)",
+  "title": "Blueprint evaluation suite (registry-local format)",
   "description": "Case inputs must be synthetic. A shared evaluation-result format is unreconciled.",
   "type": "object",
   "additionalProperties": false,

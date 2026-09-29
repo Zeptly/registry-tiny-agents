@@ -1,23 +1,23 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:zeptly:tiny-agents:schema:common",
-  "title": "Common definitions (PROVISIONAL serialisation conventions)",
-  "description": "PROVISIONAL. The syntax of registryId, registryRef.registry, capabilityName, digest and semverRange is subject to cross-registry reconciliation. Every serialisation convention lives in this file (and tools/src/ids.ts); nothing else in the codebase should depend on the exact syntax.",
+  "title": "Common definitions (aligned to Zeptly Registry Protocol v0.1; capability namespace still deferred)",
+  "description": "Structured cross-registry references per Registry Protocol v0.1. Serialisation-sensitive definitions (id pattern, digest, capability names) stay here and in tools/src/ids.ts only.",
   "$defs": {
     "registryId": {
-      "description": "PROVISIONAL stable object identifier. Filesystem-safe by construction: it is used verbatim as a directory name (see tools/src/layout.ts). No structure inside the id is meaningful to tooling.",
+      "description": "Logical artifact identity within a registry. Independent of filesystem layout (see tools/src/layout.ts).",
       "type": "string",
       "minLength": 3,
       "maxLength": 128,
       "pattern": "^[a-z0-9]+([._-][a-z0-9]+)*$"
     },
     "registryName": {
-      "description": "PROVISIONAL registry/type discriminator for cross-registry references (e.g. 'skills').",
+      "description": "Registry/type discriminator for cross-registry references (e.g. 'skills', 'tiny-agents').",
       "type": "string",
       "pattern": "^[a-z][a-z0-9-]{1,31}$"
     },
     "semver": {
-      "description": "SemVer 2.0.0 version. (Change classification is PROVISIONAL, see docs/LIFECYCLE.md.)",
+      "description": "SemVer 2.0.0 version.",
       "type": "string",
       "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$"
     },
@@ -29,20 +29,39 @@
       "pattern": "^[0-9A-Za-z.^~<>=* |-]+$"
     },
     "digest": {
-      "description": "PROVISIONAL content digest convention: '<algorithm>:<hex>'.",
+      "description": "Content digest '<algorithm>:<hex>' (sha256).",
       "type": "string",
       "pattern": "^sha256:[0-9a-f]{64}$"
     },
     "registryRef": {
-      "description": "PROVISIONAL cross-registry reference, kept STRUCTURED so the string serialisation can change freely. Semantic requirement: registry/type + id + version/range + optional digest.",
+      "description": "Protocol v0.1 structured reference {registry, id, version, digest?}. `version` may be a range; digest may be omitted or null.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["registry", "id", "version"],
+      "required": [
+        "registry",
+        "id",
+        "version"
+      ],
       "properties": {
-        "registry": { "$ref": "#/$defs/registryName" },
-        "id": { "$ref": "#/$defs/registryId" },
-        "version": { "$ref": "#/$defs/versionRange" },
-        "digest": { "$ref": "#/$defs/digest" }
+        "registry": {
+          "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryName"
+        },
+        "id": {
+          "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryId"
+        },
+        "version": {
+          "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/versionRange"
+        },
+        "digest": {
+          "oneOf": [
+            {
+              "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
       }
     },
     "capabilityName": {
@@ -62,13 +81,28 @@
       "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]*$",
       "maxLength": 200
     },
-    "shortText": { "type": "string", "minLength": 1, "maxLength": 500 },
-    "longText": { "type": "string", "minLength": 1, "maxLength": 4000 },
+    "shortText": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "longText": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000
+    },
     "effectClass": {
       "description": "AgentGit-inspired tool-effect classification (vocabulary only; no AgentGit dependency).",
-      "enum": ["reversible", "compensable", "irreversible"]
+      "enum": [
+        "reversible",
+        "compensable",
+        "irreversible"
+      ]
     },
-    "dateTime": { "type": "string", "format": "date-time" },
+    "dateTime": {
+      "type": "string",
+      "format": "date-time"
+    },
     "actor": {
       "description": "Governance identity. Placeholders (prefix 'PLACEHOLDER-') are rejected in a production registry root.",
       "type": "string",

@@ -1,16 +1,35 @@
-reportVersion: sanitisation-report/v0-provisional
+reportVersion: sanitisation-report/v1alpha1
 synthetic: true
-subject: { id: example.request-triage, version: 0.1.0 }
-blueprintDigest: "sha256:ce9c6c105f86a8ac015ae91f3135ae330d7f704665343f871d3ceda29675fb97"
+subject:
+  id: example.request-triage
+subjectDigest: sha256:b43b3190b22d5c99a191e6ec799ca1d85aba1884d3204cc08429a2f2585f6873
 checks:
-  - { kind: secret-scan, result: pass, findings: 0, tool: SYNTHETIC-scanner }
-  - { kind: pii-scan, result: pass, findings: 0, tool: SYNTHETIC-scanner }
-  - { kind: workspace-identifier-scan, result: pass, findings: 0, tool: SYNTHETIC-scanner }
-  - { kind: concrete-config-scan, result: pass, findings: 0, tool: SYNTHETIC-scanner }
-  - { kind: slot-generalisation, result: pass, findings: 0 }
-  - { kind: synthetic-examples, result: pass, findings: 0 }
+  - kind: secret-scan
+    result: pass
+    findings: 0
+    tool: SYNTHETIC-scanner
+  - kind: pii-scan
+    result: pass
+    findings: 0
+    tool: SYNTHETIC-scanner
+  - kind: workspace-identifier-scan
+    result: pass
+    findings: 0
+    tool: SYNTHETIC-scanner
+  - kind: concrete-config-scan
+    result: pass
+    findings: 0
+    tool: SYNTHETIC-scanner
+  - kind: slot-generalisation
+    result: pass
+    findings: 0
+  - kind: synthetic-examples
+    result: pass
+    findings: 0
 generalisation:
   tenantContentRemoved: true
   tenantSpecificValuesBoundToSlots: true
   summary: SYNTHETIC report. The example was written from scratch and contains no tenant data by construction.
-reviewer: { kind: automated, identity: PLACEHOLDER-sanitisation-reviewer }
+reviewer:
+  kind: automated
+  identity: PLACEHOLDER-sanitisation-reviewer

@@ -22,9 +22,9 @@ task ──► blueprint resolution ──► blueprint (adapt) │ fresh compil
 
 | Axis | Values | Notes |
 |---|---|---|
-| `maturity` | `candidate` \| `canonical` | Location: `blueprints/candidates/…` vs `blueprints/canonical/…` |
-| `origin` | `native` \| `upstream-seed` \| `evolved` | How the blueprint came to exist |
-| `lifecycle` | `active` \| `deprecated` \| `revoked` | Per version, in `lifecycle.yaml` (outside the seal) |
+| `metadata.maturity` | `candidate` \| `canonical` | Zone: `blueprints/candidates/…` vs `blueprints/canonical/…` (zone must match the field) |
+| `metadata.origin` | `native` \| `upstream-seed` \| `evolved` | How the blueprint came to exist |
+| lifecycle | `active` \| `deprecated` \| `revoked` | Append-only overlay `lifecycle.yaml` (outside the seal) |
 
 `COMPILED` is intentionally absent. See [LIFECYCLE.md](LIFECYCLE.md) for the four *provenance classes* derived from
 `origin` and the transition rules.
@@ -32,11 +32,11 @@ task ──► blueprint resolution ──► blueprint (adapt) │ fresh compil
 ## Repository layout of one version
 
 ```
-blueprints/<maturity>/<id>/<version>/
-  blueprint.yaml            the blueprint (schema/blueprint.schema.json)
-  sanitisation-report.yaml  generalisation/privacy attestation, bound to blueprint.yaml by digest
+blueprints/<candidates|canonical>/<segment(id)>/<version>/     (location derived by layout.ts; identity lives in the document)
+  blueprint.yaml            the blueprint (schema/blueprint.schema.json); carries `attestations`
+  sanitisation-report.yaml  generalisation/privacy attestation document, bound to the content digest
   evals/suite.yaml          synthetic evaluation suite
-  evals/results/*.yaml      evaluation results (canonical: at least one passing)
+  evals/results/*.yaml      evaluation result documents (canonical: at least one passing attestation)
   lifecycle.yaml            append-only lifecycle history (only mutable file in a canonical dir)
   integrity.json            seal over every other file          (canonical only)
   promotion.yaml            promotion record and gates checked  (canonical only)
@@ -49,21 +49,22 @@ version; retiring one means deprecating or revoking it.
 
 ## Tooling
 
-`tools/` is small and layered so the provisional conventions stay swappable:
+`tools/` is small and layered so serialisation conventions stay swappable:
 
 | Module | Responsibility |
 |---|---|
-| `ids.ts`, `schema/common.schema.json` | **Only** place that knows id / reference / digest / capability-name syntax |
-| `layout.ts` | **Only** place that knows the on-disk layout (id used verbatim as directory name) |
+| `ids.ts`, `schema/common.schema.json` | Id / reference / digest / capability-name patterns |
+| `layout.ts` | **Only** place that knows the on-disk layout; discovery never derives identity from paths |
 | `validate.ts` | Schema + semantic rules + policy application |
 | `scan.ts` | Privacy / no-concrete-config scanner (independent of the sanitisation report) |
-| `integrity.ts` | Sealing/digests |
-| `index-gen.ts` | Deterministic, timestamp-free index |
+| `integrity.ts` | Content digest and directory seal |
+| `index-gen.ts` | Deterministic, timestamp-free index (identity, digest, maturity, lifecycle, origin, location) |
+| `resolve.ts` | Range → exact version + digest → runtime lock (offline, index-driven) |
 | `immutability.ts` | Git-based immutability enforcement |
 
-Blueprint data refers to other registries with a **structured** reference
-(`{registry, id, version, digest?}`), never a parsed string, so the serialisation can change without touching data
-semantics.
+Blueprint data refers to other registries with a **structured** reference (`{registry, id, version, digest?}`), never a
+parsed string. References validate structurally with no cross-repository network access; references into this
+registry are additionally checked against the local root.
 
 ## AgentGit-inspired principles (no dependency)
 
@@ -78,7 +79,7 @@ and undoes tool effects by reversal or compensation. We take the *vocabulary and
 | Tool effect reversal / compensation | Every capability declares `effect: reversible \| compensable \| irreversible`; irreversible ⇒ approval required, compensable ⇒ compensation described, `securityClassification.maxEffect` bounds all |
 | Reproducibility | Content digests, sealed versions, synthetic evaluation suites bound to the blueprint by digest |
 
-Raw sessions, tapes and trajectories **never** enter Git; only opaque, provisional references do.
+Raw sessions, tapes and trajectories **never** enter Git; only opaque evidence pointers do.
 
 ## Upstream seeds
 

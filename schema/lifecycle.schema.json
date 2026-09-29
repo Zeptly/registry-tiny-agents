@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:zeptly:tiny-agents:schema:lifecycle",
-  "title": "Version lifecycle record (PROVISIONAL)",
+  "title": "Version lifecycle record (registry-local format)",
   "description": "The ONLY file in a canonical version directory that may change after publication. Append-only history.",
   "type": "object",
   "additionalProperties": false,

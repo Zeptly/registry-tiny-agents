@@ -1,50 +1,56 @@
-# Blueprint schema (v0, PROVISIONAL)
+# Blueprint schema (`registry.zeptly.dev/v1alpha1`, kind `TinyAgentBlueprint`)
 
-Authoritative definition: [`schema/blueprint.schema.json`](../schema/blueprint.schema.json). Semantic rules that JSON
-Schema cannot express live in `tools/src/validate.ts`.
+Authoritative: [`schema/blueprint.schema.json`](../schema/blueprint.schema.json). Semantic rules JSON Schema cannot
+express live in `tools/src/validate.ts`. Envelope fields follow Registry Protocol v0.1
+([PROTOCOL-ALIGNMENT.md](PROTOCOL-ALIGNMENT.md)); everything under `spec` is Tiny-Agent-specific.
+
+## Common envelope
 
 | Field | Purpose |
 |---|---|
-| `apiVersion`, `kind` | Envelope; `tiny-agent-blueprint/v0-provisional` |
-| `id`, `version` | Stable id (**PROVISIONAL syntax**) and SemVer |
-| `maturity`, `origin` | Registry axes (lifecycle is in `lifecycle.yaml`) |
-| `metadata` | name, description, `taskClass`, labels, maintainers, `synthetic` |
+| `metadata.id`, `.version`, `.registry` | Logical identity (registry is always `tiny-agents`); independent of directory layout |
+| `metadata.maturity` | `candidate` \| `canonical` |
+| `metadata.origin` | `{type: native \| upstream-seed \| evolved, evolution?: {kind: discovered \| refined, sourceRefs}}` |
+| `metadata.synthetic` | Local extension: fabricated example content (never in a production root) |
+| `references` | Structured `{registry, id, version, digest?}`; must equal the refs used in `spec` |
+| `provenance` | `createdAt`, `authors`, `sourceRefs` (registry refs or `{upstream:{source,path,revision}}`), `transformations` (`normalisation`, `clustering`, …) |
+| `security` | `classification`, `capabilities` (`{capability, effect}`), `approvals` (runtime approval requirements) |
+| `attestations` | `{type, ref, subjectDigest, outcome?}`, digest-bound; see below |
+
+`lifecycle` is deliberately **not** in `metadata`: it is the append-only overlay `lifecycle.yaml`.
+
+## `spec` (Tiny Agent semantics)
+
+| Field | Purpose |
+|---|---|
+| `descriptor` | name, description, `taskClass`, labels |
 | `intent` | Resolution signature: summary, `appliesWhen`, `doesNotApplyWhen` |
 | `interface` | Expected inputs (with `trust`) and outputs |
 | **`procedure`** | Reusable ordered steps; may reference `{{slot.<name>}}` and capability/skill keys |
 | **`slots`** | The only places task-specific values are bound at compile time; values are never stored here |
-| **`adaptation`** | `mayAlter` (with operations + bounds), `mustPreserve` (invariants), `locked` (reasons) |
-| `skills` | *References* to Skill Blueprints (structured `{registry,id,version,digest?}`); never inlined |
-| `capabilities` | **Abstract** capability requirements with effect class, operations, approval, compensation |
-| `modelPolicy` | Abstract requirements (tier, tool calling, modalities, context, cost/latency); no model IDs |
-| `contextPolicy` | Memory (`none`\|`scratch-only`), untrusted input handling |
-| `executionConstraints` | Step/tool/time/token/retry limits, `onLimit`, termination conditions |
-| `securityClassification` | Data sensitivity, `maxEffect`, egress |
+| **`adaptation`** | `mayAlter` (operations + bounds), `mustPreserve` (invariants), `locked` (reasons) |
+| `skills` | Skill Blueprint *references* (never inlined) |
+| `capabilities` | **Abstract** requirements with effect class (`reversible`/`compensable`/`irreversible`), operations, approval, compensation |
+| `effects` | `maxEffect` bound and `egress` |
+| `modelPolicy`, `contextPolicy`, `executionConstraints` | Abstract model requirements, memory/untrusted-input handling, limits |
+| `lineage` | Exactly one of `native{rationale}` / `seed{licence, securityValidation}` / `recurrence{counts}` matching `origin.type` |
+| `evaluation` | Suite path and `minPassRate` gate |
 | `compatibility` | Runtime contract version |
-| `provenance` | Authoring; exactly one of `native` / `upstream` / `evolution`; evidence references; sanitisation report |
-| `evaluation` | Suite path, result paths, `minPassRate` gate |
 
-## The adaptation contract
+## Adaptation contract
 
-The future compiler may change a blueprint only within these bounds. Every **step, slot, skill and capability** must
-be classified **exactly once**:
+Every **step, slot, skill and capability** is classified exactly once as `mayAlter`, `mustPreserve` or `locked`.
+`security`, `interface` and `evaluation` may never be `mayAlter`; `security` must be `locked`: the compiler and
+runtime must not elevate or silently alter the declared security classification.
 
-* `mayAlter` — target + permitted operations (`reword`, `reorder`, `insert-*`, `remove`, `bind`, `tighten`,
-  `substitute-equivalent`) + textual bounds;
-* `mustPreserve` — target + invariant that must still hold after adaptation;
-* `locked` — target + reason; not to be touched.
+## Attestations and digests
 
-`securityClassification`, `interface` and `evaluation` may never appear in `mayAlter`; `securityClassification`
-must be `locked`. Slots must be referenced by the procedure, and every placeholder must resolve to a declared slot.
+`attestations[].subjectDigest` must equal the artifact's current content digest, so editing content invalidates every
+attestation until it is redone. `sanitisation` and `evaluation` attestations reference in-directory documents
+(`file:<path>`) that themselves carry `subjectDigest`; `security-review` and `recurrence` use opaque `evidence://…`
+pointers (the full Evidence Protocol is deferred). See PROTOCOL-ALIGNMENT.md for the digest definition.
 
-## What is forbidden in canonical (and enforced for all) blueprints
+## Forbidden in registry content
 
-Executable commands, infrastructure endpoints/URLs, credentials, concrete provider/MCP server configuration,
-concrete model IDs, workspace/tenant identifiers. Enforced by the schema (`additionalProperties: false`), a key
-denylist and pattern detectors (see [PRIVACY.md](PRIVACY.md)).
-
-## Beyond the original field list
-
-Added: `slots`, `adaptation`, per-capability `effect`/`approval`/`compensation`, `securityClassification.maxEffect`,
-input `trust`, `contextPolicy`, `executionConstraints.onLimit`, lineage (`evolution.parents`), `metadata.synthetic`,
-a sealed integrity digest and a separate append-only lifecycle.
+Executable commands, infrastructure endpoints/URLs, credentials, concrete provider/MCP server configuration, concrete
+model IDs, workspace/tenant identifiers, and any raw runtime payload (tapes, trajectories, sessions).

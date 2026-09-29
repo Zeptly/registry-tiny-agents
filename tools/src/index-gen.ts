@@ -2,53 +2,58 @@ import { join } from "node:path";
 import { existsSync, readFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { compareSemver } from "./semver.js";
 import { FILES } from "./layout.js";
+import { REGISTRY_NAME } from "./ids.js";
+import { schemaErrors } from "./load.js";
 import { validateRoot, type LoadedVersion } from "./validate.js";
 
-/** Deterministic: no timestamps, fixed key order, sorted entries. Format and publication are PROVISIONAL. */
+/**
+ * Deterministic derived data: no timestamps, fixed key order, sorted entries.
+ * Carries identity, version, digest, maturity, lifecycle, origin and artifact location (Registry Protocol v0.1).
+ */
 export function buildIndex(rootArg: string): { text: string; errors: number } {
   const v = validateRoot(rootArg);
   const errors = v.diagnostics.filter((d) => d.severity === "error").length;
   const entry = (x: LoadedVersion) => ({
+    registry: REGISTRY_NAME,
     id: x.id,
     version: x.version,
-    maturity: x.maturity,
-    origin: x.blueprint.origin,
-    provenanceClass: x.provenanceClass,
-    lifecycle: x.lifecycle,
-    name: x.blueprint.metadata.name,
-    taskClass: x.blueprint.metadata.taskClass,
-    summary: x.blueprint.intent.summary,
-    capabilities: x.blueprint.capabilities.map((c: { capability: string }) => c.capability).sort(),
-    skills: x.blueprint.skills.map((s: { ref: unknown }) => s.ref),
-    synthetic: x.blueprint.metadata.synthetic,
-    path: `blueprints/${x.maturity === "canonical" ? "canonical" : "candidates"}/${x.id}/${x.version}`,
-    blueprintDigest: x.blueprintDigest,
+    digest: x.digest,
     sealDigest: x.sealDigest ?? null,
+    maturity: x.maturity,
+    lifecycle: x.lifecycle,
+    origin: { type: x.blueprint.metadata.origin.type, evolutionKind: x.blueprint.metadata.origin.evolution?.kind ?? null },
+    location: x.location,
+    synthetic: x.blueprint.metadata.synthetic,
+    provenanceClass: x.provenanceClass,
+    name: x.blueprint.spec.descriptor.name,
+    taskClass: x.blueprint.spec.descriptor.taskClass,
+    summary: x.blueprint.spec.intent.summary,
+    capabilities: x.blueprint.security.capabilities.map((c: { capability: string }) => c.capability).sort(),
+    references: x.blueprint.references,
   });
   const sorted = [...v.versions].sort((a, b) => a.id.localeCompare(b.id) || compareSemver(a.version, b.version) || a.maturity.localeCompare(b.maturity));
-  const ids = [...new Set(sorted.map((x) => x.id))];
-  const latest = (id: string, m: string) => {
-    const c = sorted.filter((x) => x.id === id && x.maturity === m && x.lifecycle === "active");
-    return c.length ? c[c.length - 1]!.version : null;
-  };
   const doc = {
-    indexFormat: "tiny-agent-registry-index/v0-provisional",
-    registryPurpose: v.purpose,
+    apiVersion: "registry.zeptly.dev/v1alpha1",
+    kind: "RegistryIndex",
+    registry: REGISTRY_NAME,
+    purpose: v.purpose,
     entries: sorted.map(entry),
-    resolution: ids.map((id) => ({ id, latestActiveCanonical: latest(id, "canonical"), latestActiveCandidate: latest(id, "candidate") })),
   };
+  const bad = schemaErrors("index", doc);
+  if (bad.length) throw new Error(`generated index violates its schema (synthetic content in a production index?): ${bad.join("; ")}`);
   return { text: JSON.stringify(doc, null, 2) + "\n", errors };
 }
 
 export function writeIndex(root: string, check: boolean): { ok: boolean; message: string } {
-  const { text, errors } = buildIndex(root);
-  if (errors) return { ok: false, message: `registry has ${errors} validation error(s); refusing to build index` };
+  let built: { text: string; errors: number };
+  try { built = buildIndex(root); } catch (e) { return { ok: false, message: (e as Error).message }; }
+  if (built.errors) return { ok: false, message: `registry has ${built.errors} validation error(s); refusing to build index` };
   const out = join(root, FILES.indexOut);
   if (check) {
     const cur = existsSync(out) ? readFileSync(out, "utf8") : null;
-    return cur === text ? { ok: true, message: `${out} is up to date` } : { ok: false, message: `${out} is stale; run 'npm run index'` };
+    return cur === built.text ? { ok: true, message: `${out} is up to date` } : { ok: false, message: `${out} is stale; run 'npm run index'` };
   }
   mkdirSync(join(root, "index"), { recursive: true });
-  writeFileSync(out, text);
+  writeFileSync(out, built.text);
   return { ok: true, message: `wrote ${out}` };
 }

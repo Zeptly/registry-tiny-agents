@@ -1,4 +1,4 @@
-# Zep submission contract (PROVISIONAL)
+# Zep submission contract (registry-local, `submission/v1alpha1`)
 
 Zep (the future evolutionary steward) is **not implemented here**. This document defines the governed interface it —
 or any other author — uses to propose registry changes.
@@ -12,15 +12,17 @@ required checks and no auto-merge.
 
 Adds `blueprints/candidates/<id>/<version>/` containing:
 
-* `blueprint.yaml`, `sanitisation-report.yaml`, `evals/suite.yaml`, `lifecycle.yaml`;
+* `blueprint.yaml` (with `sanitisation` and, for evolved candidates, `recurrence` attestations), `sanitisation-report.yaml`,
+  `evals/suite.yaml`, `lifecycle.yaml`;
 * `submission.yaml` ([`schema/submission.schema.json`](../schema/submission.schema.json)): `submissionId`,
   `submitter {kind: zep|human|other-agent, identity}`, `action` (`propose-candidate` | `propose-revision` |
-  `propose-promotion` | `propose-lifecycle-change`), `subject {id, version}`, `artifacts` (digests of blueprint,
-  sanitisation report, eval suite), and mandatory attestations
+  `propose-promotion` | `propose-lifecycle-change`), `subject {id, version}`, `artifacts` (`subjectDigest` = artifact content
+  digest; digests of the sanitisation report and eval suite), and mandatory attestations
   (`noWorkspaceIdentifiers`, `noTenantContent`, `rawEvidenceExcluded` — all `true`).
 
-For discovered/refined candidates `provenance.evolution` carries aggregate recurrence counts and a clustering method
-descriptor, and `provenance.evidence[]` carries external references. CI verifies that the submission digests match the
+For discovered/refined candidates `metadata.origin.evolution` + `spec.lineage.recurrence` carry the kind and aggregate
+recurrence counts, `provenance.transformations` records the clustering method, and `recurrence` attestations carry
+external `evidence://` pointers. CI verifies that the submission digests match the
 files, that admission policy for the class is met (e.g. recurrence ≥ policy threshold for `discovered`), and that the
 privacy scan is clean.
 

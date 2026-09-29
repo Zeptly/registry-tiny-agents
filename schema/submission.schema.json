@@ -5,36 +5,112 @@
   "description": "Contract for governed submission of candidate blueprints (by Zep or anyone else). The submission itself is delivered as a Git PR; this file travels inside the version directory so reviewers and CI can verify what was submitted.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["submissionVersion", "synthetic", "submissionId", "submitter", "submittedAt", "action", "subject", "artifacts", "attestations"],
+  "required": [
+    "submissionVersion",
+    "synthetic",
+    "submissionId",
+    "submitter",
+    "submittedAt",
+    "action",
+    "subject",
+    "artifacts",
+    "attestations"
+  ],
   "properties": {
-    "submissionVersion": { "const": "submission/v0-provisional" },
-    "synthetic": { "type": "boolean" },
-    "submissionId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{5,63}$" },
-    "submitter": {
-      "type": "object", "additionalProperties": false, "required": ["kind", "identity"],
-      "properties": { "kind": { "enum": ["zep", "human", "other-agent"] }, "identity": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/actor" } }
+    "submissionVersion": {
+      "const": "submission/v1alpha1"
     },
-    "submittedAt": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/dateTime" },
-    "action": { "enum": ["propose-candidate", "propose-revision", "propose-promotion", "propose-lifecycle-change"] },
+    "synthetic": {
+      "type": "boolean"
+    },
+    "submissionId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{5,63}$"
+    },
+    "submitter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "identity"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "zep",
+            "human",
+            "other-agent"
+          ]
+        },
+        "identity": {
+          "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/actor"
+        }
+      }
+    },
+    "submittedAt": {
+      "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/dateTime"
+    },
+    "action": {
+      "enum": [
+        "propose-candidate",
+        "propose-revision",
+        "propose-promotion",
+        "propose-lifecycle-change"
+      ]
+    },
     "subject": {
-      "type": "object", "additionalProperties": false, "required": ["id", "version"],
-      "properties": { "id": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryId" }, "version": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/semver" } }
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "version"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryId"
+        },
+        "version": {
+          "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/semver"
+        }
+      }
     },
     "artifacts": {
-      "type": "object", "additionalProperties": false, "required": ["blueprintDigest", "sanitisationReportDigest"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "subjectDigest",
+        "sanitisationReportDigest"
+      ],
       "properties": {
-        "blueprintDigest": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digest" },
-        "sanitisationReportDigest": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digest" },
-        "evalSuiteDigest": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digest" }
+        "sanitisationReportDigest": {
+          "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digest"
+        },
+        "evalSuiteDigest": {
+          "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digest"
+        },
+        "subjectDigest": {
+          "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digest"
+        }
       }
     },
     "attestations": {
-      "type": "object", "additionalProperties": false,
-      "required": ["noWorkspaceIdentifiers", "noTenantContent", "rawEvidenceExcluded"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "noWorkspaceIdentifiers",
+        "noTenantContent",
+        "rawEvidenceExcluded"
+      ],
       "properties": {
-        "noWorkspaceIdentifiers": { "const": true },
-        "noTenantContent": { "const": true },
-        "rawEvidenceExcluded": { "const": true }
+        "noWorkspaceIdentifiers": {
+          "const": true
+        },
+        "noTenantContent": {
+          "const": true
+        },
+        "rawEvidenceExcluded": {
+          "const": true
+        }
       }
     }
   }

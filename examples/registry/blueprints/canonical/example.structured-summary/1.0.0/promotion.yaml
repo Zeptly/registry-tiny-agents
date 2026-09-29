@@ -1,10 +1,18 @@
-promotionVersion: promotion/v0-provisional
+promotionVersion: promotion/v1alpha1
 synthetic: true
-promotedFrom: { maturity: candidate, version: 0.2.0 }
-decidedAt: "2026-01-01T00:00:00Z"
+promotedFrom:
+  maturity: candidate
+  version: 0.2.0
+decidedAt: 2026-01-01T00:00:00Z
 policyVersion: 0
 provenanceClass: native
 reviewers:
-  - { identity: PLACEHOLDER-reviewer-maintainer, role: maintainer }
-gatesChecked: [eval-pass, sanitisation-report, privacy-scan, human-review]
+  - identity: PLACEHOLDER-reviewer-maintainer
+    role: maintainer
+gatesChecked:
+  - eval-pass
+  - sanitisation-report
+  - privacy-scan
+  - human-review
 notes: SYNTHETIC record. No real review took place.
+subjectDigest: sha256:a4c46477e663d92b760b50ffc7b1a958780163824441a6fe7691378631f39760
