@@ -8,13 +8,13 @@ express live in `tools/src/validate.ts`. Envelope fields follow Registry Protoco
 
 | Field | Purpose |
 |---|---|
-| `metadata.id`, `.version`, `.registry` | Logical identity (registry is always `tiny-agents`); independent of directory layout |
+| `metadata.id`, `.version`, `.registry` | Logical identity (registry is always `tiny-agents`; id grammar `^[a-z0-9]+([.-][a-z0-9]+)*$`); independent of directory layout |
 | `metadata.maturity` | `candidate` \| `canonical` |
 | `metadata.origin` | `{type: native \| upstream-seed \| evolved, evolution?: {kind: discovered \| refined, sourceRefs}}` |
 | `metadata.synthetic` | Local extension: fabricated example content (never in a production root) |
 | `references` | Structured `{registry, id, version, digest?}`; must equal the refs used in `spec` |
 | `provenance` | `createdAt`, `authors`, `sourceRefs` (registry refs or `{upstream:{source,path,revision}}`), `transformations` (`normalisation`, `clustering`, …) |
-| `security` | `classification`, `capabilities` (`{capability, effect}`), `approvals` (runtime approval requirements) |
+| `security` | `classification`, `capabilities` (`{capability, effect}`), `approvals` (governance approval records; excluded from the digest) |
 | `attestations` | `{type, ref, subjectDigest, outcome?}`, digest-bound; see below |
 
 `lifecycle` is deliberately **not** in `metadata`: it is the append-only overlay `lifecycle.yaml`.

@@ -2,7 +2,7 @@ reportVersion: sanitisation-report/v1alpha1
 synthetic: true
 subject:
   id: example.request-triage
-subjectDigest: sha256:b43b3190b22d5c99a191e6ec799ca1d85aba1884d3204cc08429a2f2585f6873
+subjectDigest: sha256:305e94ff081cd91d9d1daafe5aa3400eb71839af6ab38a59191ec370d8865b0c
 checks:
   - kind: secret-scan
     result: pass

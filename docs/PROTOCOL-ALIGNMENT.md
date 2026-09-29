@@ -36,6 +36,20 @@ attestations: []       # digest-bound
 | Promotion: schema, semantics, evals, provenance, security review, digest-bound attestations, approval | `policy/registry-policy.yaml` per provenance class; `promotion.yaml` | `validate` |
 | Synthetic examples isolated and marked | `examples/registry/` root (`purpose: example`); `example.` id namespace; `synthetic: true`; `evidence://synthetic/…` | `validate`; production index schema forbids synthetic entries |
 
+## Shared normalizations
+
+* **Evolution kind** lives only at `metadata.origin.evolution.kind`. The index mirrors it as `origin.evolution.kind`;
+  no derived class field is stored in artifacts, promotion records or the index.
+* **ID grammar**: lowercase ASCII letters/digits in segments separated by single `.` or `-`
+  (`^[a-z0-9]+([.-][a-z0-9]+)*$`, 3–128 characters), no registry-specific prefix. The `example.` prefix is the
+  reserved synthetic namespace, not an ID convention for production.
+* **Runtime lock** (`schema/runtime-lock.schema.json`): `subject` plus one ordered `entries[]` item per declared
+  reference, each `status: resolved | unresolved`. Unresolved items carry a code (`no-peer-index`, `not-found`,
+  `no-eligible-version`, `digest-mismatch`); foreign references are never omitted.
+* **Content safety**: explicit filename allow-list (`policy files.allow`), per-file / per-directory / file-count limits,
+  symbolic links and special files rejected and never followed, LF-only UTF-8, and tape/trace/transcript detection
+  (forbidden keys, role-tagged turn structures, transcript text and opaque-blob patterns).
+
 ## Identity is decoupled from layout
 
 `metadata.id` / `version` / `maturity` are authoritative. Directory names are not parsed into identity; consumers use
@@ -44,11 +58,16 @@ the filesystem) and `validate` lints that artifacts sit there. Changing the layo
 
 ## Digests
 
-* **Artifact `digest`** (index, references, locks) = SHA-256 of the canonical JSON of the blueprint **excluding**
-  `attestations`, `metadata.version` and `metadata.maturity`. Attestations cannot contain the digest of a document that
-  contains them, and promotion (version + maturity change) must not invalidate evaluations of unchanged content.
-* **`sealDigest`** (canonical only) = SHA-256 over every file in the version directory except `lifecycle.yaml` and
-  `integrity.json`: tamper-evidence for the directory, checked by `validate` and the Git immutability check.
+* **Artifact `digest`** (index, references, locks) = SHA-256 of the canonical JSON of the blueprint. **Included:**
+  identity, `spec`, `references`, `provenance`, `security.classification` and `security.capabilities`. **Excluded:**
+  `metadata.version`, `metadata.maturity`, lifecycle (overlay file), `attestations` and `security.approvals`
+  (governance approvals). Attestations cannot contain the digest of a document that contains them, and promotion must
+  not invalidate evaluations of unchanged content.
+* **`sealDigest`** (canonical only) = separate SHA-256 over the canonical payload files (every file in the version
+  directory except `lifecycle.yaml` and `integrity.json`): tamper-evidence, checked by `validate` and the Git
+  immutability check.
+* Canonical JSON, code-point ordering and the LF-only line-ending policy are specified in
+  [CANONICALIZATION.md](CANONICALIZATION.md) and pinned by golden vectors.
 * Attestation documents (sanitisation report, evaluation result, promotion record, submission) carry `subjectDigest`
   and are rejected when stale.
 
@@ -58,8 +77,9 @@ the filesystem) and `validate` lints that artifacts sit there. Changing the layo
    a value inside immutable content would go stale on deprecation. Lifecycle is read from `lifecycle.yaml` and emitted in
    the index.
 2. **Digest definition** as above (content digest vs directory seal).
-3. **`security.approvals`** is interpreted as runtime approval *requirements* (derived from
-   `spec.capabilities[].approval`), not governance approval records (those live in `promotion.yaml`).
+3. **`security.approvals`** holds **governance approval records** (`{role, identity, subjectDigest}`), excluded from the
+   artifact digest and digest-bound like attestations. For canonical versions they must mirror `promotion.yaml`
+   reviewers; candidates carry none. Runtime approval *requirements* stay in `spec.capabilities[].approval`.
 4. **`security.classification`** vocabulary: `public | internal | confidential | restricted` (superset of prior local
    values plus the protocol example `restricted`).
 5. **`metadata.origin.type`** keeps `upstream-seed` alongside the protocol's `native`/`evolved`.

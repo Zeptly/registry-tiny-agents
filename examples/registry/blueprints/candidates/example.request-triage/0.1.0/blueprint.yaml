@@ -181,14 +181,14 @@ security:
 attestations:
   - type: sanitisation
     ref: file:sanitisation-report.yaml
-    subjectDigest: sha256:b43b3190b22d5c99a191e6ec799ca1d85aba1884d3204cc08429a2f2585f6873
+    subjectDigest: sha256:305e94ff081cd91d9d1daafe5aa3400eb71839af6ab38a59191ec370d8865b0c
     outcome: pass
   - type: recurrence
     ref: evidence://synthetic/recurrence/0001
-    subjectDigest: sha256:b43b3190b22d5c99a191e6ec799ca1d85aba1884d3204cc08429a2f2585f6873
+    subjectDigest: sha256:305e94ff081cd91d9d1daafe5aa3400eb71839af6ab38a59191ec370d8865b0c
   - type: recurrence
     ref: evidence://synthetic/recurrence/0002
-    subjectDigest: sha256:b43b3190b22d5c99a191e6ec799ca1d85aba1884d3204cc08429a2f2585f6873
+    subjectDigest: sha256:305e94ff081cd91d9d1daafe5aa3400eb71839af6ab38a59191ec370d8865b0c
   - type: recurrence
     ref: evidence://synthetic/recurrence/0003
-    subjectDigest: sha256:b43b3190b22d5c99a191e6ec799ca1d85aba1884d3204cc08429a2f2585f6873
+    subjectDigest: sha256:305e94ff081cd91d9d1daafe5aa3400eb71839af6ab38a59191ec370d8865b0c

@@ -83,8 +83,7 @@
             "type": "object",
             "additionalProperties": false,
             "required": [
-              "type",
-              "evolutionKind"
+              "type"
             ],
             "properties": {
               "type": {
@@ -94,12 +93,20 @@
                   "evolved"
                 ]
               },
-              "evolutionKind": {
-                "enum": [
-                  "discovered",
-                  "refined",
-                  null
-                ]
+              "evolution": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "kind"
+                ],
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "discovered",
+                      "refined"
+                    ]
+                  }
+                }
               }
             }
           },
@@ -108,14 +115,6 @@
           },
           "synthetic": {
             "type": "boolean"
-          },
-          "provenanceClass": {
-            "enum": [
-              "native",
-              "upstream-seed",
-              "discovered",
-              "refined"
-            ]
           },
           "name": {
             "type": "string"

@@ -150,5 +150,5 @@ security:
 attestations:
   - type: sanitisation
     ref: file:sanitisation-report.yaml
-    subjectDigest: sha256:e6943a74356fc31169ca212eae0fd4cc9301946022978a31f7cbf93e17b5cd14
+    subjectDigest: sha256:aa755dfa2a56780d935000328d6801b0065fdf71fd5c661e27edb79f31418983
     outcome: pass

@@ -11,7 +11,6 @@
     "promotedFrom",
     "decidedAt",
     "policyVersion",
-    "provenanceClass",
     "reviewers",
     "gatesChecked",
     "subjectDigest"
@@ -45,14 +44,6 @@
     "policyVersion": {
       "type": "integer",
       "minimum": 0
-    },
-    "provenanceClass": {
-      "enum": [
-        "native",
-        "upstream-seed",
-        "discovered",
-        "refined"
-      ]
     },
     "reviewers": {
       "type": "array",

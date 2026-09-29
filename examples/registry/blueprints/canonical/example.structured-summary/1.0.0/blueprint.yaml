@@ -170,17 +170,20 @@ security:
   capabilities:
     - capability: document.read
       effect: reversible
-  approvals: []
+  approvals:
+    - role: maintainer
+      identity: PLACEHOLDER-reviewer-maintainer
+      subjectDigest: sha256:7c953f60067a549e67b8a454971638cc26abe0d9ab17f7176a7ee5ba59eb78ea
 attestations:
   - type: sanitisation
     ref: file:sanitisation-report.yaml
-    subjectDigest: sha256:a4c46477e663d92b760b50ffc7b1a958780163824441a6fe7691378631f39760
+    subjectDigest: sha256:7c953f60067a549e67b8a454971638cc26abe0d9ab17f7176a7ee5ba59eb78ea
     outcome: pass
   - type: evaluation
     ref: file:evals/results/synthetic-run-0001.yaml
-    subjectDigest: sha256:a4c46477e663d92b760b50ffc7b1a958780163824441a6fe7691378631f39760
+    subjectDigest: sha256:7c953f60067a549e67b8a454971638cc26abe0d9ab17f7176a7ee5ba59eb78ea
     outcome: pass
   - type: security-review
     ref: evidence://synthetic/security-review/0001
-    subjectDigest: sha256:a4c46477e663d92b760b50ffc7b1a958780163824441a6fe7691378631f39760
+    subjectDigest: sha256:7c953f60067a549e67b8a454971638cc26abe0d9ab17f7176a7ee5ba59eb78ea
     outcome: pass

@@ -14,7 +14,8 @@ What the runtime may rely on from this registry:
 * immutable canonical versions addressed by `id@version` + content `digest` (and `sealDigest` for directory integrity);
 * the resolver (`tools/src/resolve.ts`): declared range → exact version → content digest → **runtime lock**
   (`schema/runtime-lock.schema.json`), which the runtime records in its execution evidence. Ranges resolve to active
-  canonical versions only; unresolved references are reported, never guessed;
+  canonical versions only. The lock has a `subject` and one entry per declared reference; references that cannot be
+  resolved (for example no peer index supplied) appear as `status: unresolved` with a reason code, never omitted;
 * the adaptation contract (`mayAlter` / `mustPreserve` / `locked`) as the compiler's boundary;
 * abstract capabilities and model policy, which the runtime maps to concrete tools/models it controls;
 * effect classes, approval and compensation declarations for governing execution;

@@ -85,6 +85,7 @@ test("references are structural objects (digest optional or null); strings and u
   assert.ok(has(errors(bad), "schema(blueprint)"));
   assert.equal(describeRef({ registry: "skills", id: "x.y", version: "1.0.0" }), "skills/x.y@1.0.0");
   assert.ok(isRegistryId("research.web-fact-check"));
+  assert.ok(!isRegistryId("bad_id.underscore") && !isRegistryId("Upper.case") && !isRegistryId("a..b") && !isRegistryId("-a.b"));
 });
 
 test("envelope fields derived from spec must agree (references, security.capabilities, approvals)", () => {
@@ -95,8 +96,11 @@ test("envelope fields derived from spec must agree (references, security.capabil
   edit(r2, BP, (d) => { d.security.capabilities[0].effect = "irreversible"; });
   assert.ok(has(errors(r2), "security.capabilities must equal"));
   const r3 = tempRoot();
-  edit(r3, BP, (d) => { d.security.approvals = [{ capability: "document.read", requirement: "required" }]; });
-  assert.ok(has(errors(r3), "security.approvals must list exactly"));
+  edit(r3, BP, (d) => { d.security.approvals = []; });
+  assert.ok(has(errors(r3), "security.approvals must mirror promotion.yaml reviewers"));
+  const r4 = tempRoot();
+  edit(r4, BB, (d) => { d.security.approvals = [{ role: "maintainer", identity: "PLACEHOLDER-x", subjectDigest: d.attestations[0].subjectDigest }]; });
+  assert.ok(has(errors(r4), "candidates carry no governance approvals"));
 });
 
 test("origin, lineage and provenance tell one consistent story", () => {
@@ -168,9 +172,9 @@ test("attestations carry pointers only, never content", () => {
 test("no runtime tapes or sensitive payloads: unexpected file types and oversized files are rejected", () => {
   const r = tempRoot();
   writeFileSync(join(r, B, "trajectory.jsonl"), '{"role":"user"}\n');
-  assert.ok(has(errors(r), "unexpected-file-type"));
+  assert.ok(has(errors(r), "filename allow-list"));
   const r2 = tempRoot();
-  writeFileSync(join(r2, B, "evals", "dump.yaml"), "x: " + "a".repeat(300_000) + "\n");
+  append(r2, `${B}/evals/suite.yaml`, "# " + "a".repeat(300_000) + "\n");
   assert.ok(has(errors(r2), "exceeds"));
   const r3 = tempRoot();
   edit(r3, BB, (d) => { d.attestations.push({ type: "recurrence", ref: "evidence://prod/session/abc", subjectDigest: d.attestations[0].subjectDigest }); });
@@ -413,26 +417,36 @@ test("resolver turns ranges into exact version + digest; candidates, revoked and
   assert.equal(resolveRef([idx], ref("^1.0.0")).resolved?.version, "1.2.0");
   assert.equal(resolveRef([idx], ref("*")).resolved?.version, "2.0.0");
   assert.equal(resolveRef([idx], ref("1.3.0")).resolved?.version, "1.3.0"); // exact pin may select deprecated
-  assert.ok(resolveRef([idx], ref("1.4.0")).reason); // revoked never resolves
-  assert.ok(resolveRef([idx], ref("^0.9.0")).reason); // candidate excluded by default
+  assert.equal(resolveRef([idx], ref("1.4.0")).unresolved?.code, "no-eligible-version"); // revoked never resolves
+  assert.equal(resolveRef([idx], ref("^0.9.0")).unresolved?.code, "no-eligible-version"); // candidate excluded by default
   assert.equal(resolveRef([idx], ref("^0.9.0"), { allowCandidates: true }).resolved?.version, "0.9.0");
-  assert.ok(resolveRef([idx], ref("^1.0.0", { digest: "sha256:" + "f".repeat(64) })).reason);
+  assert.equal(resolveRef([idx], ref("^1.0.0", { digest: "sha256:" + "f".repeat(64) })).unresolved?.code, "digest-mismatch");
   const pinned = resolveRef([idx], ref("^1.0.0")).resolved!;
   assert.equal(resolveRef([idx], ref("^1.0.0", { digest: pinned.digest })).resolved?.digest, pinned.digest);
 });
 
-test("lock is deterministic, schema-valid, and reports unresolved references without network access", () => {
+test("lock is deterministic, schema-valid, and lists foreign references explicitly as unresolved (never omitted)", () => {
   const idx = readJson(join(EXAMPLE, "index", "registry-index.json"));
   const bp = readYaml(join(EXAMPLE, BP));
-  const refs = [{ registry: "tiny-agents", id: "example.structured-summary", version: "^1.0.0" }, ...bp.references];
-  const a = buildLock([idx], refs), b = buildLock([idx], refs);
+  const me = idx.entries.find((e: Doc) => e.id === "example.structured-summary");
+  const subject = { registry: "tiny-agents", id: me.id, version: me.version, digest: me.digest };
+  const a = buildLock([idx], subject, bp.references), b = buildLock([idx], subject, bp.references);
   assert.deepEqual(a, b);
   assert.deepEqual(schemaErrors("runtime-lock", a), []);
-  assert.equal(a.entries.length, 1);
-  assert.equal(a.entries[0].resolved.version, "1.0.0");
-  assert.equal(a.entries[0].resolved.digest, idx.entries.find((e: Doc) => e.id === "example.structured-summary").digest);
-  assert.equal(a.unresolved.length, 1);
-  assert.equal(a.unresolved[0].requested.registry, "skills");
+  assert.equal(a.entries.length, bp.references.length); // one entry per declared reference
+  assert.equal(a.entries[0].status, "unresolved");
+  assert.equal(a.entries[0].unresolved.code, "no-peer-index");
+  assert.equal(a.entries[0].requested.registry, "skills");
+  // same reference with a supplied peer index resolves (mechanics only; synthetic index)
+  const peer = idxOf(entry("synthetic.summarise-text", "1.2.0", { registry: "skills" }));
+  peer.registry = "skills";
+  const c = buildLock([idx, peer], subject, bp.references);
+  assert.equal(c.entries[0].status, "resolved");
+  assert.equal(c.entries[0].resolved.version, "1.2.0");
+  assert.deepEqual(schemaErrors("runtime-lock", c), []);
+  // peer index present but artifact absent -> not-found, still explicit
+  const d = buildLock([idx, { ...peer, entries: [] }], subject, bp.references);
+  assert.equal(d.entries[0].unresolved.code, "not-found");
 });
 
 // ---- git immutability ---------------------------------------------------------------------

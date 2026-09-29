@@ -8,17 +8,18 @@
       "registry": "tiny-agents",
       "id": "example.request-triage",
       "version": "0.1.0",
-      "digest": "sha256:b43b3190b22d5c99a191e6ec799ca1d85aba1884d3204cc08429a2f2585f6873",
+      "digest": "sha256:305e94ff081cd91d9d1daafe5aa3400eb71839af6ab38a59191ec370d8865b0c",
       "sealDigest": null,
       "maturity": "candidate",
       "lifecycle": "active",
       "origin": {
         "type": "evolved",
-        "evolutionKind": "discovered"
+        "evolution": {
+          "kind": "discovered"
+        }
       },
       "location": "blueprints/candidates/example.request-triage/0.1.0",
       "synthetic": true,
-      "provenanceClass": "discovered",
       "name": "[SYNTHETIC] Inbound Request Triage",
       "taskClass": "ops.triage",
       "summary": "Classify an inbound request into a small category set and annotate it with a priority.",
@@ -32,17 +33,15 @@
       "registry": "tiny-agents",
       "id": "example.seed-page-reader",
       "version": "0.1.0",
-      "digest": "sha256:e6943a74356fc31169ca212eae0fd4cc9301946022978a31f7cbf93e17b5cd14",
+      "digest": "sha256:aa755dfa2a56780d935000328d6801b0065fdf71fd5c661e27edb79f31418983",
       "sealDigest": null,
       "maturity": "candidate",
       "lifecycle": "active",
       "origin": {
-        "type": "upstream-seed",
-        "evolutionKind": null
+        "type": "upstream-seed"
       },
       "location": "blueprints/candidates/example.seed-page-reader/0.1.0",
       "synthetic": true,
-      "provenanceClass": "upstream-seed",
       "name": "[SYNTHETIC] Seed Page Reader",
       "taskClass": "web.read",
       "summary": "Read a single web page and answer a question about it.",
@@ -55,17 +54,15 @@
       "registry": "tiny-agents",
       "id": "example.structured-summary",
       "version": "1.0.0",
-      "digest": "sha256:a4c46477e663d92b760b50ffc7b1a958780163824441a6fe7691378631f39760",
-      "sealDigest": "sha256:279b6da838ebb9812e45c7912aaf7bfe495d89bb2cc3662d6d480d893950ccf4",
+      "digest": "sha256:7c953f60067a549e67b8a454971638cc26abe0d9ab17f7176a7ee5ba59eb78ea",
+      "sealDigest": "sha256:6ea9d9edb7418f9f961a56de3d2afc1a8978041ab94714659d4d92ddeb5d43c1",
       "maturity": "canonical",
       "lifecycle": "active",
       "origin": {
-        "type": "native",
-        "evolutionKind": null
+        "type": "native"
       },
       "location": "blueprints/canonical/example.structured-summary/1.0.0",
       "synthetic": true,
-      "provenanceClass": "native",
       "name": "[SYNTHETIC] Structured Document Summary",
       "taskClass": "text.summarise",
       "summary": "Summarise a single document into a headline summary and a bounded list of key points.",

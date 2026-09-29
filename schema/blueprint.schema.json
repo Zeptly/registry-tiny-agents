@@ -964,22 +964,30 @@
           }
         },
         "approvals": {
-          "description": "Runtime approval requirements (derived from spec.capabilities[].approval).",
+          "description": "Governance approval records (digest-bound; excluded from the artifact digest). For canonical versions they mirror promotion.yaml reviewers; empty for candidates. Runtime approval requirements live in spec.capabilities[].approval.",
           "type": "array",
-          "maxItems": 24,
+          "maxItems": 16,
           "items": {
             "type": "object",
             "additionalProperties": false,
             "required": [
-              "capability",
-              "requirement"
+              "role",
+              "identity",
+              "subjectDigest"
             ],
             "properties": {
-              "capability": {
-                "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/capabilityName"
+              "role": {
+                "enum": [
+                  "maintainer",
+                  "security",
+                  "privacy"
+                ]
               },
-              "requirement": {
-                "const": "required"
+              "identity": {
+                "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/actor"
+              },
+              "subjectDigest": {
+                "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digest"
               }
             }
           }

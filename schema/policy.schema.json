@@ -11,7 +11,8 @@
     "classes",
     "privacy",
     "namespaces",
-    "limits"
+    "limits",
+    "files"
   ],
   "properties": {
     "policyVersion": {
@@ -136,12 +137,39 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "maxFileBytes"
+        "maxFileBytes",
+        "maxVersionDirBytes",
+        "maxFilesPerVersion"
       ],
       "properties": {
         "maxFileBytes": {
           "type": "integer",
           "minimum": 1024
+        },
+        "maxVersionDirBytes": {
+          "type": "integer",
+          "minimum": 1024
+        },
+        "maxFilesPerVersion": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "files": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allow"
+      ],
+      "properties": {
+        "allow": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          },
+          "description": "Anchored regular expressions matched against the posix path of each file relative to its version directory. Anything else is rejected."
         }
       }
     }

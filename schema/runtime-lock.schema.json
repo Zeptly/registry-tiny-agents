@@ -1,15 +1,15 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:zeptly:tiny-agents:schema:runtime-lock",
-  "title": "Exact runtime lock (range -> exact version + digest)",
-  "description": "Produced by the resolver; the runtime records it in evidence. Deterministic: no timestamps (the runtime stamps its own evidence).",
+  "title": "Exact runtime lock",
+  "description": "Range -> exact version + content digest. One entry per declared reference, in declaration order; a reference that cannot be resolved (for example because no peer index for its registry was supplied) is listed with status 'unresolved' and a reason code, never omitted. Deterministic: no timestamps.",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "apiVersion",
     "kind",
-    "entries",
-    "unresolved"
+    "subject",
+    "entries"
   ],
   "properties": {
     "apiVersion": {
@@ -18,79 +18,130 @@
     "kind": {
       "const": "RuntimeLock"
     },
-    "entries": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "requested",
-          "resolved"
-        ],
-        "properties": {
-          "requested": {
-            "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryRef"
-          },
-          "resolved": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "registry",
-              "id",
-              "version",
-              "digest"
-            ],
-            "properties": {
-              "registry": {
-                "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryName"
-              },
-              "id": {
-                "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryId"
-              },
-              "version": {
-                "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/semver"
-              },
-              "digest": {
-                "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digest"
-              },
-              "sealDigest": {
-                "oneOf": [
-                  {
-                    "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digest"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              },
-              "maturity": {
-                "enum": [
-                  "candidate",
-                  "canonical"
-                ]
-              }
-            }
-          }
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "registry",
+        "id",
+        "version",
+        "digest"
+      ],
+      "properties": {
+        "registry": {
+          "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryName"
+        },
+        "id": {
+          "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryId"
+        },
+        "version": {
+          "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/semver"
+        },
+        "digest": {
+          "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digest"
         }
       }
     },
-    "unresolved": {
+    "entries": {
       "type": "array",
       "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "requested",
-          "reason"
-        ],
-        "properties": {
-          "requested": {
-            "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryRef"
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "requested",
+              "status",
+              "resolved"
+            ],
+            "properties": {
+              "requested": {
+                "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryRef"
+              },
+              "status": {
+                "const": "resolved"
+              },
+              "resolved": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "registry",
+                  "id",
+                  "version",
+                  "digest"
+                ],
+                "properties": {
+                  "registry": {
+                    "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryName"
+                  },
+                  "id": {
+                    "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryId"
+                  },
+                  "version": {
+                    "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/semver"
+                  },
+                  "digest": {
+                    "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digest"
+                  },
+                  "sealDigest": {
+                    "oneOf": [
+                      {
+                        "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digest"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "maturity": {
+                    "enum": [
+                      "candidate",
+                      "canonical"
+                    ]
+                  }
+                }
+              }
+            }
           },
-          "reason": {
-            "type": "string"
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "requested",
+              "status",
+              "unresolved"
+            ],
+            "properties": {
+              "requested": {
+                "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryRef"
+              },
+              "status": {
+                "const": "unresolved"
+              },
+              "unresolved": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "code",
+                  "message"
+                ],
+                "properties": {
+                  "code": {
+                    "enum": [
+                      "no-peer-index",
+                      "not-found",
+                      "no-eligible-version",
+                      "digest-mismatch"
+                    ]
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
           }
-        }
+        ]
       }
     }
   }

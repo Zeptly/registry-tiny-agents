@@ -10,8 +10,8 @@ subject:
   id: example.request-triage
   version: 0.1.0
 artifacts:
-  subjectDigest: sha256:b43b3190b22d5c99a191e6ec799ca1d85aba1884d3204cc08429a2f2585f6873
-  sanitisationReportDigest: sha256:95a4445f8dc432e0d3feb4a85b2db72628d45eeab5650221d3865882eeb1905e
+  subjectDigest: sha256:305e94ff081cd91d9d1daafe5aa3400eb71839af6ab38a59191ec370d8865b0c
+  sanitisationReportDigest: sha256:53add778f7d3f444fdb03566120c0270cef095be75ef95c433472081a998e7e9
   evalSuiteDigest: sha256:493007077a33948cd7972996b7dae31f920da5c28a0affc8472378f045a6e7be
 attestations:
   noWorkspaceIdentifiers: true

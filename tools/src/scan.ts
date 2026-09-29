@@ -38,15 +38,22 @@ export class Scanner {
 
   scanValue(value: unknown, file: string, path = ""): Finding[] {
     if (typeof value === "string") return this.scanText(value, file, path);
-    if (Array.isArray(value)) return value.flatMap((v, i) => this.scanValue(v, file, `${path}[${i}]`));
+    if (Array.isArray(value)) {
+      const turns = value.filter((v) => v && typeof v === "object" && !Array.isArray(v) && "role" in (v as Doc)).length;
+      const f: Finding[] = turns >= 2 ? [{ file, path, detector: "transcript-structure", message: "array of role-tagged turns looks like a conversation transcript" }] : [];
+      return [...f, ...value.flatMap((v, i) => this.scanValue(v, file, `${path}[${i}]`))];
+    }
     if (value && typeof value === "object") {
-      return Object.entries(value as Doc).flatMap(([k, v]) => {
+      const keys = Object.keys(value as Doc).map((k) => k.toLowerCase());
+      const turn: Finding[] = keys.includes("role") && keys.includes("content")
+        ? [{ file, path, detector: "transcript-structure", message: "object with role+content looks like a conversation turn" }] : [];
+      return [...turn, ...Object.entries(value as Doc).flatMap(([k, v]) => {
         const p = path ? `${path}.${k}` : k;
         const f: Finding[] = this.keys.has(k.toLowerCase())
           ? [{ file, path: p, detector: "forbidden-key", message: `key '${k}' is forbidden in registry content` }]
           : [];
         return [...f, ...this.scanText(k, file, `${p}#key`), ...this.scanValue(v, file, p)];
-      });
+      })];
     }
     return [];
   }

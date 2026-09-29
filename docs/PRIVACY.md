@@ -14,8 +14,9 @@ workspace facts must not become global blueprint content. Workspace-private blue
    observation window). Workspace identifiers are never recorded — not even hashed.
 4. **Evidence by reference.** Raw sessions, tapes and trajectories stay outside Git. `attestations[]` carry only
    `{type, ref, subjectDigest, outcome?}`; `evidence://…` refs must be pseudonymous handles minted for promotion, not raw
-   tenant or session identifiers (the full Evidence Protocol is deferred). File types other than YAML/JSON/Markdown and
-   files above the policy size cap are rejected, so tapes and payload dumps cannot be committed.
+   tenant or session identifiers (the full Evidence Protocol is deferred). Only files matching the policy filename allow-list are read
+   (anything else is rejected unread); files above the size caps, symbolic links and non-LF/non-UTF-8 files are rejected;
+   and transcript/trace/tape structures are detected, so tapes and payload dumps cannot be committed.
 5. **Synthetic evaluation.** Eval suites must declare `dataProvenance: synthetic`.
 6. **Sanitisation attestation.** Each version carries a `sanitisation` attestation pointing at `sanitisation-report.yaml`: which
    detectors ran, that generalisation happened, bound to the artifact's exact content digest. Stale reports fail validation. The report is an

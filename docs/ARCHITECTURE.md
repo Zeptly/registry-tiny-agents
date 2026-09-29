@@ -74,9 +74,9 @@ and undoes tool effects by reversal or compensation. We take the *vocabulary and
 
 | AgentGit idea | Used here as |
 |---|---|
-| Append-only trajectories; branch on divergence, never rewrite | Canonical dirs immutable; evolution = new version with `lineage` (`provenance.evolution.parents`) |
+| Append-only trajectories; branch on divergence, never rewrite | Canonical dirs immutable; evolution = new version with `lineage` (`metadata.origin.evolution.sourceRefs`) |
 | Checkpoints as addressable state | Evidence references may point at `checkpoint`/`trajectory`/`tape`/`session` handles (external) |
-| Tool effect reversal / compensation | Every capability declares `effect: reversible \| compensable \| irreversible`; irreversible ⇒ approval required, compensable ⇒ compensation described, `securityClassification.maxEffect` bounds all |
+| Tool effect reversal / compensation | Every capability declares `effect: reversible \| compensable \| irreversible`; irreversible ⇒ approval required, compensable ⇒ compensation described, `spec.effects.maxEffect` bounds all |
 | Reproducibility | Content digests, sealed versions, synthetic evaluation suites bound to the blueprint by digest |
 
 Raw sessions, tapes and trajectories **never** enter Git; only opaque evidence pointers do.

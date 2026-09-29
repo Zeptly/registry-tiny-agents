@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { existsSync, readFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { compareSemver } from "./semver.js";
+import { compareCodePoints, sortCodePoints } from "./order.js";
 import { FILES } from "./layout.js";
 import { REGISTRY_NAME } from "./ids.js";
 import { schemaErrors } from "./load.js";
@@ -21,17 +22,16 @@ export function buildIndex(rootArg: string): { text: string; errors: number } {
     sealDigest: x.sealDigest ?? null,
     maturity: x.maturity,
     lifecycle: x.lifecycle,
-    origin: { type: x.blueprint.metadata.origin.type, evolutionKind: x.blueprint.metadata.origin.evolution?.kind ?? null },
+    origin: { type: x.blueprint.metadata.origin.type, ...(x.blueprint.metadata.origin.evolution ? { evolution: { kind: x.blueprint.metadata.origin.evolution.kind } } : {}) },
     location: x.location,
     synthetic: x.blueprint.metadata.synthetic,
-    provenanceClass: x.provenanceClass,
     name: x.blueprint.spec.descriptor.name,
     taskClass: x.blueprint.spec.descriptor.taskClass,
     summary: x.blueprint.spec.intent.summary,
-    capabilities: x.blueprint.security.capabilities.map((c: { capability: string }) => c.capability).sort(),
+    capabilities: sortCodePoints(x.blueprint.security.capabilities.map((c: { capability: string }) => c.capability)),
     references: x.blueprint.references,
   });
-  const sorted = [...v.versions].sort((a, b) => a.id.localeCompare(b.id) || compareSemver(a.version, b.version) || a.maturity.localeCompare(b.maturity));
+  const sorted = [...v.versions].sort((a, b) => compareCodePoints(a.id, b.id) || compareSemver(a.version, b.version) || compareCodePoints(a.maturity, b.maturity));
   const doc = {
     apiVersion: "registry.zeptly.dev/v1alpha1",
     kind: "RegistryIndex",

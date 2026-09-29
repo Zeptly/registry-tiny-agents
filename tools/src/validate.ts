@@ -1,10 +1,12 @@
-import { statSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { join, resolve, sep } from "node:path";
 import { DEFAULT_POLICY, exists, readData, readYaml, schemaErrors, type Doc, type SchemaName } from "./load.js";
-import { FILES, discoverVersionDirs, expectedDir, listFilesRecursive, listUpstreamSources, toPosix, type Maturity, type VersionDir } from "./layout.js";
+import { FILES, discoverVersionDirs, expectedDir, findUnsafeEntries, inspectTree, listUpstreamSources, toPosix, type Maturity, type VersionDir } from "./layout.js";
+import { textPolicyViolation } from "./textpolicy.js";
 import { computeIntegrity, contentDigest, fileDigest } from "./integrity.js";
 import { REGISTRY_NAME, describeRef, isSemver } from "./ids.js";
 import { compareSemver, parseSemver, satisfies } from "./semver.js";
+import { compareCodePoints } from "./order.js";
 import { Scanner } from "./scan.js";
 
 export interface Diagnostic { severity: "error" | "warning"; where: string; message: string }
@@ -90,17 +92,30 @@ export function validateRoot(rootArg: string, opts: { policyPath?: string } = {}
     }
   }
 
+  // ---- symlinks / special files anywhere in registry content: rejected, never followed
+  for (const u of findUnsafeEntries(root)) err(u.rel, `${u.kind === "symlink" ? "symbolic links" : "special files"} are not allowed in registry content`);
+
   // ---- pass 1: each version directory (identity comes from the document, not the path)
   const versions: LoadedVersion[] = [];
   const evalBest = new Map<LoadedVersion, number>();
   for (const vd of discoverVersionDirs(root)) {
     const where = vd.rel;
-    const files = listFilesRecursive(vd.dir);
+    const tree = inspectTree(vd.dir);
+    const files = tree.files;
+    const allow = (policy.files.allow as string[]).map((r) => new RegExp(r));
+    let dirBytes = 0;
+    if (files.length > policy.limits.maxFilesPerVersion) err(where, `version directory holds ${files.length} files (max ${policy.limits.maxFilesPerVersion})`);
     for (const f of files) {
       const full = join(vd.dir, f);
-      if (statSync(full).size > policy.limits.maxFileBytes) err(`${where}/${f}`, `file exceeds ${policy.limits.maxFileBytes} bytes (registry Git holds procedure, not runtime payloads)`);
+      if (!allow.some((re) => re.test(f))) { err(`${where}/${f}`, "file is not in the filename allow-list (policy files.allow); not read or scanned"); continue; }
+      const size = statSync(full).size;
+      dirBytes += size;
+      if (size > policy.limits.maxFileBytes) { err(`${where}/${f}`, `file exceeds ${policy.limits.maxFileBytes} bytes (registry Git holds procedure, not runtime payloads); not scanned`); continue; }
+      const bad = textPolicyViolation(readFileSync(full));
+      if (bad) { err(`${where}/${f}`, `text policy: ${bad}`); continue; }
       for (const fi of scanner.scanFile(full)) err(`${where}/${f}`, `privacy: ${fi.path || "<file>"}: ${fi.message} [${fi.detector}]`);
     }
+    if (dirBytes > policy.limits.maxVersionDirBytes) err(where, `version directory exceeds ${policy.limits.maxVersionDirBytes} bytes`);
     const bp = load(join(vd.dir, FILES.blueprint), "blueprint", `${where}/${FILES.blueprint}`);
     if (!bp) { if (!files.includes(FILES.blueprint)) err(where, "missing blueprint.yaml"); continue; }
 
@@ -141,13 +156,19 @@ export function validateRoot(rootArg: string, opts: { policyPath?: string } = {}
       if (integ) {
         const actual = computeIntegrity(vd.dir);
         if (integ.digest !== actual.digest) err(where, `sealed content changed: integrity.json digest ${integ.digest} != computed ${actual.digest}`);
-        if (Object.keys(actual.files).sort().join(",") !== Object.keys(integ.files).sort().join(",")) err(where, "integrity.json file list does not match directory contents");
+        const a = new Set(Object.keys(actual.files)), b = new Set(Object.keys(integ.files));
+        if (a.size !== b.size || [...a].some((f) => !b.has(f))) err(where, "integrity.json file list does not match directory contents");
         sealDigest = integ.digest;
       }
     }
 
     const loaded: LoadedVersion = { zone: vd.zone, dir: vd.dir, location: vd.rel, id, version, maturity, blueprint: bp, provenanceClass: cls, lifecycle, digest, sealDigest };
     evalBest.set(loaded, checkAttestations(loaded, policy, load, syntheticRule, actorRule, purpose, err));
+    if (maturity === "candidate" && bp.security.approvals.length) err(where, "candidates carry no governance approvals (security.approvals must be empty until promotion)");
+    for (const [i, a] of (bp.security.approvals as Doc[]).entries()) {
+      actorRule(`${where} security.approvals`, a.identity);
+      if (a.subjectDigest !== digest) err(`${where} security.approvals[${i}]`, `stale: subjectDigest ${a.subjectDigest} != content digest ${digest}`);
+    }
 
     // submission envelope (optional)
     if (exists(join(vd.dir, FILES.submission))) {
@@ -224,7 +245,9 @@ export function validateRoot(rootArg: string, opts: { policyPath?: string } = {}
       syntheticRule(`${where}/promotion synthetic`, pr.synthetic);
       pr.reviewers.forEach((r: Doc) => actorRule(`${where}/promotion reviewer`, r.identity));
       if (pr.subjectDigest !== v.digest) err(where, "promotion record subjectDigest does not match the artifact content digest (stale)");
-      if (pr.provenanceClass !== v.provenanceClass) err(where, `promotion record class '${pr.provenanceClass}' != derived class '${v.provenanceClass}'`);
+      const want = (pr.reviewers as Doc[]).map((r) => `${r.role}:${r.identity}`).sort(compareCodePoints).join("|");
+      const have = (bp.security.approvals as Doc[]).map((a) => `${a.role}:${a.identity}`).sort(compareCodePoints).join("|");
+      if (want !== have) err(where, "security.approvals must mirror promotion.yaml reviewers (role + identity)");
       if (pr.policyVersion > policy.policyVersion) err(where, "promotion record cites a newer policy version than the current policy");
       if (pr.reviewers.length < pol.minHumanReviewers) err(where, `promotion needs >= ${pol.minHumanReviewers} reviewers for class ${v.provenanceClass}`);
       const roles = new Set(pr.reviewers.map((r: Doc) => r.role));
@@ -278,9 +301,6 @@ function checkEnvelope(bp: Doc, where: string, err: Err) {
   const caps = (bp.spec.capabilities as Doc[]).map((c) => `${c.capability}:${c.effect}`).sort();
   const sec = (bp.security.capabilities as Doc[]).map((c) => `${c.capability}:${c.effect}`).sort();
   if (JSON.stringify(caps) !== JSON.stringify(sec)) err(where, "security.capabilities must equal spec.capabilities (capability + effect)");
-  const appr = (bp.spec.capabilities as Doc[]).filter((c) => c.approval === "required").map((c) => c.capability).sort();
-  const sappr = (bp.security.approvals as Doc[]).map((c) => c.capability).sort();
-  if (JSON.stringify(appr) !== JSON.stringify(sappr)) err(where, "security.approvals must list exactly the capabilities with approval: required");
 }
 
 /** metadata.origin, spec.lineage and provenance must tell one consistent story. */

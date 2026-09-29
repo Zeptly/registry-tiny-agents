@@ -2,7 +2,7 @@ reportVersion: sanitisation-report/v1alpha1
 synthetic: true
 subject:
   id: example.structured-summary
-subjectDigest: sha256:a4c46477e663d92b760b50ffc7b1a958780163824441a6fe7691378631f39760
+subjectDigest: sha256:7c953f60067a549e67b8a454971638cc26abe0d9ab17f7176a7ee5ba59eb78ea
 checks:
   - kind: secret-scan
     result: pass

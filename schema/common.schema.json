@@ -5,11 +5,11 @@
   "description": "Structured cross-registry references per Registry Protocol v0.1. Serialisation-sensitive definitions (id pattern, digest, capability names) stay here and in tools/src/ids.ts only.",
   "$defs": {
     "registryId": {
-      "description": "Logical artifact identity within a registry. Independent of filesystem layout (see tools/src/layout.ts).",
+      "description": "Shared logical identity grammar: lowercase ASCII letters and digits in segments separated by single '.' or '-'. No registry-specific prefix. Independent of filesystem layout.",
       "type": "string",
       "minLength": 3,
       "maxLength": 128,
-      "pattern": "^[a-z0-9]+([._-][a-z0-9]+)*$"
+      "pattern": "^[a-z0-9]+([.-][a-z0-9]+)*$"
     },
     "registryName": {
       "description": "Registry/type discriminator for cross-registry references (e.g. 'skills', 'tiny-agents').",

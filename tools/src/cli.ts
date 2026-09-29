@@ -5,7 +5,7 @@ import { writeIndex } from "./index-gen.js";
 import { sealDir, fileDigest } from "./integrity.js";
 import { checkImmutability } from "./immutability.js";
 import { Scanner } from "./scan.js";
-import { DEFAULT_POLICY, REPO_ROOT, readJson, readYaml, schemaErrors } from "./load.js";
+import { DEFAULT_POLICY, REPO_ROOT, readJson, readYaml, schemaErrors, type Doc } from "./load.js";
 import { buildLock, resolveRef } from "./resolve.js";
 
 const [cmd, ...rest] = process.argv.slice(2);
@@ -23,7 +23,8 @@ const USAGE = `usage:
   registry digest <file>                         print a file digest
   registry resolve --index <file>... --registry <r> --id <id> --range <range> [--digest <d>] [--allow-candidates]
   registry lock <root> --id <id> --range <range> [--index <file>...] [--allow-candidates]
-                                                 resolve an artifact and its references to an exact runtime lock
+                                                 resolve an artifact and ALL its references to an exact runtime lock
+                                                 (unresolved references are listed explicitly, exit 1)
   registry check-immutability --base <ref>       verify canonical dirs are unchanged vs a Git ref`;
 
 function main(): number {
@@ -69,11 +70,11 @@ function main(): number {
       const top = resolveRef(idx, { registry: "tiny-agents", id: opt("id") ?? "", version: opt("range") ?? "" }, { allowCandidates });
       if (!top.resolved) { console.log(JSON.stringify(top, null, 2)); return 1; }
       const bp = readYaml(resolve(root, top.resolved.location ?? "", "blueprint.yaml"));
-      const lock = buildLock(idx, [{ registry: "tiny-agents", id: top.resolved.id, version: top.resolved.version, digest: top.resolved.digest }, ...bp.references], { allowCandidates });
+      const lock = buildLock(idx, { registry: top.resolved.registry, id: top.resolved.id, version: top.resolved.version, digest: top.resolved.digest }, bp.references, { allowCandidates });
       const bad = schemaErrors("runtime-lock", lock);
       if (bad.length) { console.error(bad.join("\n")); return 1; }
       console.log(JSON.stringify(lock, null, 2));
-      return (lock.unresolved as unknown[]).length ? 1 : 0;
+      return (lock.entries as Doc[]).some((e) => e.status === "unresolved") ? 1 : 0;
     }
     default: console.log(USAGE); return cmd ? 2 : 0;
   }

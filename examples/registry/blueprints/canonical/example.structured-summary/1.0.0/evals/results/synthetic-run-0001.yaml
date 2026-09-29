@@ -2,7 +2,7 @@ resultVersion: eval-result/v1alpha1
 synthetic: true
 subject:
   id: example.structured-summary
-subjectDigest: sha256:a4c46477e663d92b760b50ffc7b1a958780163824441a6fe7691378631f39760
+subjectDigest: sha256:7c953f60067a549e67b8a454971638cc26abe0d9ab17f7176a7ee5ba59eb78ea
 suiteDigest: sha256:934df0e4087d8a50d811f720ab26f1f19b80686c03e445e3abb058eb02100ba0
 runner: SYNTHETIC fabricated result - not a real evaluation run
 summary:

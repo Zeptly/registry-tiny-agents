@@ -9,6 +9,7 @@ All changes are PRs. Git is the governance mechanism; registry state lives in fi
   Publish a new version instead.
 * Example content is SYNTHETIC and lives only under `examples/registry/`.
 * Identity comes from `metadata.*`, never from directory names. Cross-registry references are structured objects, never strings.
+* Text files are UTF-8 with LF line endings and no BOM (`.gitattributes` enforces LF); only allow-listed filenames are accepted in a version directory (`policy/registry-policy.yaml`).
 * Attestations bind to the artifact **content digest**: any content edit makes them stale (`registry validate` fails).
 
 ## Adding or changing a candidate
