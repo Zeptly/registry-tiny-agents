@@ -1,11 +1,14 @@
 {
-  "integrityVersion": "integrity/v0-provisional",
-  "digest": "sha256:6ea9d9edb7418f9f961a56de3d2afc1a8978041ab94714659d4d92ddeb5d43c1",
-  "files": {
-    "blueprint.yaml": "sha256:71c2100d8d864648df420d0a87daf95767c555c4e9cb77956668994a48a2a165",
-    "evals/results/synthetic-run-0001.yaml": "sha256:6838b8944b4f9af2b63323b5a89e07db0eae531d1855841760ee3ecabbd73126",
-    "evals/suite.yaml": "sha256:934df0e4087d8a50d811f720ab26f1f19b80686c03e445e3abb058eb02100ba0",
-    "promotion.yaml": "sha256:ce4c7aa7a775010441c487940520aa98f42f2e58376f1268fb9fac924b697f83",
-    "sanitisation-report.yaml": "sha256:3cb731598784cbd1b0d36fe0457d4de365510eb1985c91bfd9b8dd8f6e5cf982"
-  }
+  "integrityVersion": "integrity/v0.2",
+  "digestAlgorithm": "zeptly-jcs-v1",
+  "registry": "tiny-agents",
+  "id": "example.structured-summary",
+  "version": "1.0.0",
+  "digest": "sha256:e85c554c25c9c6b2ad0b7d4294df778b2f65ed1998660d7caf82915a43e2f6e1",
+  "payload": [
+    {
+      "path": "evals/suite.yaml",
+      "sha256": "190208c80f869c3354388729b5b0164275cf3f66abda38015f5f8b21a30a387f"
+    }
+  ]
 }

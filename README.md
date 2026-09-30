@@ -7,6 +7,9 @@ Canonical Zeptly registry of **Tiny Agent Blueprints**.
 > pattern* (a known-good prior the compiler adapts), not an immutable agent.
 
 **Status: aligned with Zeptly Registry Protocol v0.1** (common envelope: `apiVersion`/`kind`/`metadata`/`spec`/`references`/`provenance`/`security`/`attestations`).
+**Protocol v0.2 (`zeptly-jcs-v1`)** is adopted on this draft branch: [`docs/PROTOCOL-V0_2.md`](docs/PROTOCOL-V0_2.md), with the
+hash contract in [`docs/CANONICALIZATION.md`](docs/CANONICALIZATION.md) and language-neutral vectors in [`vectors/`](vectors/).
+
 See [`docs/PROTOCOL-ALIGNMENT.md`](docs/PROTOCOL-ALIGNMENT.md) for the rule-by-rule mapping and the interpretations that need confirmation, and
 [`docs/CROSS-REGISTRY-RECONCILIATION.md`](docs/CROSS-REGISTRY-RECONCILIATION.md) for what remains open.
 
@@ -34,7 +37,7 @@ npm ci
 npm run check           # typecheck + tests + validate both roots + index freshness
 npm run validate        # validate ./ (production) and examples/registry
 npm run index           # regenerate index/registry-index.json for both roots
-npx tsx tools/src/cli.ts seal <version-dir>            # write integrity.json
+npx tsx tools/src/cli.ts seal <version-dir>            # write integrity.json (zeptly-jcs-v1 directory seal)
 npx tsx tools/src/cli.ts check-immutability --base origin/main
 npx tsx tools/src/cli.ts lock <root> --id <id> --range '^1.0.0' [--index <peer-index.json>...]   # exact runtime lock
 ```

@@ -1,74 +1,108 @@
 /**
- * Digest conventions (see docs/CANONICALIZATION.md):
- *  - artifact `digest`  = sha256 over canonical JSON of the blueprint minus governance/derived fields;
- *  - directory `seal`   = sha256 over `<path>\0<sha256(raw bytes)>\n` lines, paths in code-point order.
+ * Digest contract `zeptly-jcs-v1` (Zeptly Registry Protocol v0.2 §3-§5); see docs/CANONICALIZATION.md.
+ *  - artifact `digest` = sha256(JCS(artifact projection)); the projection is an explicit allow-list (below);
+ *  - directory `seal`  = sha256(JCS({registry, id, version, payload: [{path, sha256}]})), payload paths in code-point
+ *    order, payload = the permitted payload files of the version directory (policy `files.payload`).
+ * A change to any rule requires a new `digestAlgorithm` identifier and new vectors.
  */
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { FILES, listFilesRecursive } from "./layout.js";
-import type { Doc } from "./load.js";
+import { FILES, inspectTree } from "./layout.js";
+import { DEFAULT_POLICY, readYaml, type Doc } from "./load.js";
+import { jcs } from "./jcs.js";
+import { textPolicyProblem, type TextProblemCode } from "./textpolicy.js";
 import { compareCodePoints } from "./order.js";
 import { CanonicalizationError, validateValueDomain } from "./valuedomain.js";
 
+export const DIGEST_ALGORITHM = "zeptly-jcs-v1";
+export const INTEGRITY_VERSION = "integrity/v0.2";
+
 export const sha256 = (data: Buffer | string): string => "sha256:" + createHash("sha256").update(data).digest("hex");
+export const sha256Hex = (data: Buffer | string): string => createHash("sha256").update(data).digest("hex");
 export const fileDigest = (path: string): string => sha256(readFileSync(path));
 
-/** Files covered by the seal: everything except the two mutable/derived files. */
-export const sealedFiles = (dir: string): string[] =>
-  listFilesRecursive(dir).filter((f) => f !== FILES.lifecycle && f !== FILES.integrity);
+/** Deprecated name kept for the vectors: canonical JSON is RFC 8785 JCS. */
+export const canonicalJson = jcs;
 
-export function computeIntegrity(dir: string): { integrityVersion: string; digest: string; files: Record<string, string> } {
-  const files: Record<string, string> = {};
-  for (const f of sealedFiles(dir)) files[f] = fileDigest(join(dir, f));
-  const lines = Object.keys(files).sort(compareCodePoints).map((f) => `${f}\0${files[f]!.slice("sha256:".length)}\n`).join("");
-  return { integrityVersion: "integrity/v0-provisional", digest: sha256(lines), files };
+/**
+ * The artifact projection. INCLUDED: apiVersion, kind, metadata.{id,registry,origin,synthetic}, spec, references,
+ * provenance, security.{classification,capabilities}. EXCLUDED: metadata.version, metadata.maturity, lifecycle (an overlay,
+ * never part of the manifest), attestations, security.approvals (governance records bound to the digest by `subjectDigest`).
+ * Runtime approval requirements live in `spec.capabilities[].approval` and therefore ARE covered.
+ * An allow-list, so a field added to the envelope later is excluded until the contract is deliberately versioned.
+ */
+export function artifactProjection(doc: Doc): Doc {
+  const pick = (o: Doc | undefined, keys: string[]): Doc => {
+    const out: Doc = {};
+    for (const k of keys) if (o && Object.prototype.hasOwnProperty.call(o, k)) out[k] = o[k];
+    return out;
+  };
+  return {
+    ...pick(doc, ["apiVersion", "kind"]),
+    metadata: pick(doc.metadata, ["id", "registry", "origin", "synthetic"]),
+    ...pick(doc, ["spec", "references", "provenance"]),
+    security: pick(doc.security, ["classification", "capabilities"]),
+  };
+}
+
+export function contentDigest(doc: Doc): string {
+  // Validate the value domain BEFORE projecting/cloning: JSON.stringify would turn NaN/Infinity into null and drop undefined.
+  const problems = validateValueDomain(doc);
+  if (problems.length) throw new CanonicalizationError(problems);
+  return sha256(jcs(artifactProjection(doc)));
+}
+
+export interface PayloadEntry { path: string; sha256: string }
+export interface Seal { integrityVersion: string; digestAlgorithm: string; registry: string; id: string; version: string; digest: string; payload: PayloadEntry[] }
+
+export const payloadPatterns = (policy: Doc): RegExp[] => (policy.files.payload as string[]).map((r) => new RegExp(r));
+
+/** Seal digest over an explicit payload list (shared by the validator, the CLI and the vectors). */
+export function sealDigest(registry: string, id: string, version: string, payload: PayloadEntry[]): string {
+  const sorted = [...payload].sort((a, b) => compareCodePoints(a.path, b.path));
+  return sha256(jcs({ registry, id, version, payload: sorted.map((p) => ({ path: p.path, sha256: p.sha256 })) }));
+}
+
+/** Payload files of a version directory: regular files matching the policy payload patterns, code-point order. */
+export function payloadFiles(dir: string, patterns: RegExp[]): string[] {
+  return inspectTree(dir).files.filter((f) => patterns.some((re) => re.test(f))).sort(compareCodePoints);
+}
+
+export class SealInputError extends Error {
+  constructor(public code: "case-collision" | "not-permitted" | TextProblemCode, public path: string, message: string) { super(`${path}: ${message} [${code}]`); this.name = "SealInputError"; }
+}
+
+/**
+ * Pure seal computation over in-memory files (the vectors run this directly). Rejects, before hashing: paths that are not
+ * permitted payload files, case-colliding paths, and payload bytes that are not UTF-8 / BOM-free / LF-only.
+ */
+export function sealFromFiles(who: { registry: string; id: string; version: string }, files: Record<string, Buffer>, patterns: RegExp[]): Seal {
+  const seen = new Map<string, string>();
+  for (const p of Object.keys(files).sort(compareCodePoints)) {
+    const k = p.toLowerCase(), other = seen.get(k);
+    if (other !== undefined) throw new SealInputError("case-collision", p, `collides with '${other}' when case is ignored`);
+    seen.set(k, p);
+  }
+  const payload: PayloadEntry[] = [];
+  for (const p of Object.keys(files).sort(compareCodePoints)) {
+    if (!patterns.some((re) => re.test(p))) continue;
+    const t = textPolicyProblem(files[p]!);
+    if (t) throw new SealInputError(t.code, p, t.message);
+    payload.push({ path: p, sha256: sha256Hex(files[p]!) });
+  }
+  return { integrityVersion: INTEGRITY_VERSION, digestAlgorithm: DIGEST_ALGORITHM, ...who, digest: sealDigest(who.registry, who.id, who.version, payload), payload };
+}
+
+export function computeSeal(dir: string, who: { registry: string; id: string; version: string }, patterns: RegExp[]): Seal {
+  const files: Record<string, Buffer> = {};
+  for (const f of inspectTree(dir).files) files[f] = patterns.some((re) => re.test(f)) ? readFileSync(join(dir, f)) : Buffer.alloc(0); // non-payload files are never read here
+  return sealFromFiles(who, files, patterns);
 }
 
 export function sealDir(dir: string): void {
-  writeFileSync(join(dir, FILES.integrity), JSON.stringify(computeIntegrity(dir), null, 2) + "\n");
-}
-
-/**
- * Canonical JSON: UTF-8 text, no insignificant whitespace, object keys in ascending code-point order, array order
- * preserved, strings as ECMAScript `JSON.stringify` (must be well-formed Unicode), numbers as ECMAScript
- * Number-to-string (finite only; -0 serialises as 0). No Unicode normalisation. Not identical to RFC 8785 for keys
- * outside the BMP (JCS orders by UTF-16 code unit; this orders by code point).
- */
-export function canonicalJson(v: unknown): string {
-  if (v === null) return "null";
-  switch (typeof v) {
-    case "string":
-      if (!v.isWellFormed()) throw new Error("canonicalJson: string contains a lone surrogate");
-      return JSON.stringify(v);
-    case "boolean": return v ? "true" : "false";
-    case "number":
-      if (!Number.isFinite(v)) throw new Error("canonicalJson: non-finite number");
-      return JSON.stringify(v);
-    case "object": {
-      if (Array.isArray(v)) return `[${v.map(canonicalJson).join(",")}]`;
-      const proto = Object.getPrototypeOf(v);
-      if (proto !== Object.prototype && proto !== null) throw new Error("canonicalJson: unsupported object type (only plain objects and arrays)");
-      const o = v as Doc;
-      return `{${Object.keys(o).sort(compareCodePoints).map((k) => `${canonicalJson(k)}:${canonicalJson(o[k])}`).join(",")}}`;
-    }
-    default: throw new Error(`canonicalJson: unsupported ${typeof v}`);
-  }
-}
-
-/**
- * The artifact `digest`. Includes identity (`metadata.id/registry/origin/synthetic`), `spec`, `references`,
- * `provenance` and `security.classification/capabilities`. Excludes `metadata.version`, `metadata.maturity`,
- * `attestations` and `security.approvals` (governance records made after content is final); lifecycle is not part of
- * the document at all. The directory seal is a separate mechanism covering the canonical payload files.
- */
-export function contentDigest(doc: Doc): string {
-  // Validate the value domain BEFORE cloning: JSON.stringify would turn NaN/Infinity into null and drop undefined.
-  const problems = validateValueDomain(doc);
-  if (problems.length) throw new CanonicalizationError(problems);
-  const c = JSON.parse(JSON.stringify(doc)) as Doc;
-  delete c.attestations;
-  if (c.metadata) { delete c.metadata.version; delete c.metadata.maturity; }
-  if (c.security) delete c.security.approvals;
-  return sha256(canonicalJson(c));
+  const bp = readYaml(join(dir, FILES.blueprint));
+  const policy = readYaml(DEFAULT_POLICY);
+  const seal = computeSeal(dir, { registry: bp.metadata.registry, id: bp.metadata.id, version: bp.metadata.version }, payloadPatterns(policy));
+  writeFileSync(join(dir, FILES.integrity), JSON.stringify(seal, null, 2) + "\n");
 }

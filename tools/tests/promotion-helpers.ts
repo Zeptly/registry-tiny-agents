@@ -11,7 +11,7 @@ import { contentDigest, fileDigest, sealDir } from "../src/integrity.js";
 import { idSegment } from "../src/layout.js";
 
 const rd = (p: string): Doc => parse(readFileSync(p, "utf8"));
-const wr = (p: string, d: unknown) => writeFileSync(p, stringify(d, { lineWidth: 0 }));
+const wr = (p: string, d: unknown) => writeFileSync(p, stringify(d, { lineWidth: 0, aliasDuplicateObjects: false }));
 
 export interface Reviewer { identity: string; role: "maintainer" | "security" | "privacy" }
 export const R = (role: Reviewer["role"], n = 1): Reviewer => ({ identity: `PLACEHOLDER-reviewer-${role}-${n}`, role });
@@ -23,6 +23,8 @@ export function rebind(dir: string): string {
   const digest = contentDigest(bp);
   for (const a of bp.attestations) a.subjectDigest = digest;
   for (const a of bp.security.approvals) a.subjectDigest = digest;
+  const suiteDoc = rd(join(dir, bp.spec.evaluation.suite));
+  for (const a of bp.attestations) if (a.type === "evaluation") a.suite = { id: suiteDoc.id, version: suiteDoc.version, digest: fileDigest(join(dir, bp.spec.evaluation.suite)) };
   wr(bpPath, bp);
   for (const a of bp.attestations) {
     if (!String(a.ref).startsWith("file:")) continue;
@@ -75,7 +77,7 @@ export function promoteCandidate(root: string, candidateRel: string, o: PromoteO
   o.mutate?.(bp);
   bp.attestations = [
     ...bp.attestations.filter((a: Doc) => a.type === "sanitisation" || a.type === "recurrence"),
-    { type: "evaluation", ref: "file:evals/results/synthetic-run-0001.yaml", subjectDigest: "sha256:" + "0".repeat(64), outcome: "pass" },
+    { type: "evaluation", ref: "file:evals/results/synthetic-run-0001.yaml", suite: { id: suite.id, version: suite.version, digest: "sha256:" + "0".repeat(64) }, result: "pass", subjectDigest: "sha256:" + "0".repeat(64) },
     { type: "security-review", ref: "evidence://synthetic/security-review/0001", subjectDigest: "sha256:" + "0".repeat(64), outcome: "pass" },
   ];
   bp.security.approvals = o.approvals === false ? [] : o.reviewers.map((r) => ({ role: r.role, identity: r.identity, subjectDigest: "sha256:" + "0".repeat(64) }));
@@ -103,7 +105,7 @@ export function makeRefinedCandidate(root: string, over: { sourceRef?: (parent: 
   for (const f of ["integrity.json", "promotion.yaml"]) rmSync(join(dir, f));
   rmSync(join(dir, "evals", "results"), { recursive: true, force: true });
   const bp = rd(join(dir, "blueprint.yaml"));
-  const parentRef = { registry: "tiny-agents", id: bp.metadata.id, version: "1.0.0", digest: parentDigest };
+  const parentRef = { registry: "tiny-agents", id: bp.metadata.id, version: "1.0.0", digest: parentDigest, digestAlgorithm: "zeptly-jcs-v1" };
   bp.metadata.version = "1.1.0"; bp.metadata.maturity = "candidate";
   bp.metadata.origin = { type: "evolved", evolution: { kind: "refined", sourceRefs: [over.sourceRef ? over.sourceRef(parentRef) : parentRef] } };
   bp.spec.lineage = { recurrence: over.recurrence ?? { distinctWorkspaceCount: 3, executionCount: 12 } };

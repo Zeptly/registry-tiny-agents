@@ -1,4 +1,4 @@
 registryRootVersion: registry-root/v1alpha1
 registry: tiny-agents
-purpose: production
+domain: production
 description: Canonical Zeptly Tiny Agent Blueprint registry. Intentionally empty until real blueprints are promoted through the governed workflow.

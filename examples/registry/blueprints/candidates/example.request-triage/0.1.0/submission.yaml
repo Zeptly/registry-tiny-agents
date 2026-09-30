@@ -12,7 +12,7 @@ subject:
 artifacts:
   subjectDigest: sha256:305e94ff081cd91d9d1daafe5aa3400eb71839af6ab38a59191ec370d8865b0c
   sanitisationReportDigest: sha256:53add778f7d3f444fdb03566120c0270cef095be75ef95c433472081a998e7e9
-  evalSuiteDigest: sha256:493007077a33948cd7972996b7dae31f920da5c28a0affc8472378f045a6e7be
+  evalSuiteDigest: sha256:f5d8c62365b621b1a9c54715d29caaddec2644cd358995a66a37ee07d66fa123
 attestations:
   noWorkspaceIdentifiers: true
   noTenantContent: true

@@ -16,11 +16,16 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
       - run: npm ci
       - name: Typecheck
         run: npm run typecheck
       - name: Unit tests
         run: npm test
+      - name: Shared zeptly-jcs-v1 vectors (independent stdlib Python verifier)
+        run: npm run vectors
       - name: Validate registry roots (schema, semantics, privacy scan, attestations, policy)
         run: npm run validate
       - name: Index is up to date and deterministic

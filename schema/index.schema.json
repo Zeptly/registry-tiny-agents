@@ -8,7 +8,8 @@
     "apiVersion",
     "kind",
     "registry",
-    "purpose",
+    "digestAlgorithm",
+    "domain",
     "entries"
   ],
   "properties": {
@@ -20,12 +21,6 @@
     },
     "registry": {
       "const": "tiny-agents"
-    },
-    "purpose": {
-      "enum": [
-        "production",
-        "example"
-      ]
     },
     "entries": {
       "type": "array",
@@ -41,7 +36,8 @@
           "lifecycle",
           "origin",
           "location",
-          "synthetic"
+          "digestAlgorithm",
+          "domain"
         ],
         "properties": {
           "registry": {
@@ -90,6 +86,8 @@
                 "enum": [
                   "native",
                   "upstream-seed",
+                  "discovered",
+                  "refined",
                   "evolved"
                 ]
               },
@@ -103,7 +101,8 @@
                   "kind": {
                     "enum": [
                       "discovered",
-                      "refined"
+                      "refined",
+                      "generalised"
                     ]
                   }
                 }
@@ -112,9 +111,6 @@
           },
           "location": {
             "type": "string"
-          },
-          "synthetic": {
-            "type": "boolean"
           },
           "name": {
             "type": "string"
@@ -136,9 +132,21 @@
             "items": {
               "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryRef"
             }
+          },
+          "domain": {
+            "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/domain"
+          },
+          "digestAlgorithm": {
+            "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digestAlgorithm"
           }
         }
       }
+    },
+    "domain": {
+      "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/domain"
+    },
+    "digestAlgorithm": {
+      "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digestAlgorithm"
     }
   },
   "allOf": [

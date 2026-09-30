@@ -2,14 +2,16 @@ import { readFileSync, statSync } from "node:fs";
 import { join, resolve, sep } from "node:path";
 import { DEFAULT_POLICY, exists, parseFileChecked, readYaml, schemaErrors, type Doc, type SchemaName } from "./load.js";
 import { FILES, discoverVersionDirs, expectedDir, findUnsafeEntries, inspectTree, listUpstreamSources, toPosix, type Maturity, type VersionDir } from "./layout.js";
-import { textPolicyViolation } from "./textpolicy.js";
-import { computeIntegrity, contentDigest, fileDigest } from "./integrity.js";
+import { textPolicyProblem } from "./textpolicy.js";
+import { DIGEST_ALGORITHM, computeSeal, contentDigest, fileDigest, payloadFiles, payloadPatterns } from "./integrity.js";
 import { REGISTRY_NAME, describeRef, isSemver } from "./ids.js";
 import { compareSemver, parseSemver, satisfies } from "./semver.js";
 import { compareCodePoints } from "./order.js";
 import { Scanner } from "./scan.js";
+import type { ParseProblem } from "./manifest.js";
 
-export interface Diagnostic { severity: "error" | "warning"; where: string; message: string }
+/** `code`/`path`/`line`/`column` are present for parse-level problems (Protocol v0.2 §9: file, path and machine-readable code). */
+export interface Diagnostic { severity: "error" | "warning"; where: string; message: string; code?: string; path?: string; line?: number; column?: number }
 export type ProvenanceClass = "native" | "upstream-seed" | "discovered" | "refined";
 
 export interface LoadedVersion {
@@ -25,7 +27,7 @@ export interface LoadedVersion {
   digest: string;
   sealDigest?: string;
 }
-export interface RootValidation { root: string; purpose: "production" | "example" | "unknown"; diagnostics: Diagnostic[]; versions: LoadedVersion[] }
+export interface RootValidation { root: string; domain: "production" | "synthetic" | "unknown"; diagnostics: Diagnostic[]; versions: LoadedVersion[] }
 
 export function provenanceClass(bp: Doc): ProvenanceClass {
   const t = bp.metadata.origin.type;
@@ -45,6 +47,7 @@ export function validateRoot(rootArg: string, opts: { policyPath?: string } = {}
   const root = resolve(rootArg);
   const diagnostics: Diagnostic[] = [];
   const err: Err = (where, message) => diagnostics.push({ severity: "error", where, message });
+  const errParse = (where: string, p: ParseProblem) => diagnostics.push({ severity: "error", where, message: `${p.path && p.path !== "<root>" ? `${p.path}: ` : ""}${p.message}${p.line ? ` (line ${p.line}, column ${p.column})` : ""} [${p.code}]`, code: p.code, path: p.path, ...(p.line ? { line: p.line, column: p.column } : {}) });
   const warn: Err = (where, message) => diagnostics.push({ severity: "warning", where, message });
   const schema = (where: string, name: SchemaName, data: unknown): boolean => {
     const es = schemaErrors(name, data);
@@ -53,11 +56,11 @@ export function validateRoot(rootArg: string, opts: { policyPath?: string } = {}
   };
   // Every YAML/JSON file is parsed and value-checked exactly once. A file that fails (syntax, duplicate keys, invalid
   // values, policy rejection) is reported once and is never loaded, hashed or reported as valid.
-  const parsed = new Map<string, { doc?: Doc; problems: string[]; reported: boolean }>();
+  const parsed = new Map<string, { doc?: Doc; problems: ParseProblem[]; reported: boolean }>();
   const parseChecked = (path: string, where: string): Doc | undefined => {
     let e = parsed.get(path);
-    if (!e) { const r = parseFileChecked(path); e = { doc: r.doc, problems: r.problems, reported: false }; parsed.set(path, e); }
-    if (!e.doc && !e.reported) { e.problems.forEach((m) => err(where, m)); e.reported = true; }
+    if (!e) { const r = parseFileChecked(path); e = { doc: r.doc, problems: r.diagnostics, reported: false }; parsed.set(path, e); }
+    if (!e.doc && !e.reported) { e.problems.forEach((m) => errParse(where, m)); e.reported = true; }
     return e.doc;
   };
   const reject = (path: string) => parsed.set(path, { problems: [], reported: true });
@@ -71,17 +74,17 @@ export function validateRoot(rootArg: string, opts: { policyPath?: string } = {}
   // ---- root marker + policy
   const rootDoc = load(join(root, FILES.root), "registry-root", FILES.root);
   if (!rootDoc) err(FILES.root, "missing or invalid registry root marker");
-  const purpose = (rootDoc?.purpose as "production" | "example" | undefined) ?? "unknown";
+  const domain = (rootDoc?.domain as "production" | "synthetic" | undefined) ?? "unknown";
   const policy = load(opts.policyPath ?? DEFAULT_POLICY, "policy", "policy");
-  if (!policy) { err("policy", "policy missing or invalid"); return { root, purpose, diagnostics, versions: [] }; }
+  if (!policy) { err("policy", "policy missing or invalid"); return { root, domain, diagnostics, versions: [] }; }
   const scanner = new Scanner(policy.privacy);
 
   const syntheticRule = (where: string, flag: unknown) => {
-    if (purpose === "example" && flag !== true) err(where, "example registry roots require synthetic: true on every object");
-    if (purpose === "production" && flag === true) err(where, "synthetic content is not allowed in a production registry root");
+    if (domain === "synthetic" && flag !== true) err(where, "synthetic registry roots require synthetic: true on every object");
+    if (domain === "production" && flag === true) err(where, "synthetic content is not allowed in a production registry root");
   };
   const actorRule = (where: string, actor: unknown) => {
-    if (purpose === "production" && typeof actor === "string" && PLACEHOLDER.test(actor)) err(where, `placeholder identity '${actor}' is not allowed in a production registry root`);
+    if (domain === "production" && typeof actor === "string" && PLACEHOLDER.test(actor)) err(where, `placeholder identity '${actor}' is not allowed in a production registry root`);
   };
 
   // ---- upstream sources
@@ -114,7 +117,17 @@ export function validateRoot(rootArg: string, opts: { policyPath?: string } = {}
     const tree = inspectTree(vd.dir);
     const files = tree.files;
     const allow = (policy.files.allow as string[]).map((r) => new RegExp(r));
+    for (const pf of payloadFiles(vd.dir, payloadPatterns(policy))) if (!allow.some((re) => re.test(pf))) err(`${where}/${pf}`, "payload file is not in the filename allow-list");
     let dirBytes = 0;
+    {
+      const folded = new Map<string, string>();
+      for (const f of files) {
+        const k = f.toLowerCase();
+        const other = folded.get(k);
+        if (other !== undefined) err(`${where}/${f}`, `path collides with '${other}' when case is ignored (case-colliding paths are rejected) [case-collision]`);
+        else folded.set(k, f);
+      }
+    }
     if (files.length > policy.limits.maxFilesPerVersion) err(where, `version directory holds ${files.length} files (max ${policy.limits.maxFilesPerVersion})`);
     for (const f of files) {
       const full = join(vd.dir, f);
@@ -123,8 +136,8 @@ export function validateRoot(rootArg: string, opts: { policyPath?: string } = {}
       dirBytes += size;
       if (size > policy.limits.maxFileBytes) { reject(full); err(`${where}/${f}`, `file exceeds ${policy.limits.maxFileBytes} bytes (registry Git holds procedure, not runtime payloads); not scanned`); continue; }
       const bytes = readFileSync(full);
-      const bad = textPolicyViolation(bytes);
-      if (bad) { reject(full); err(`${where}/${f}`, `text policy: ${bad}`); continue; }
+      const bad = textPolicyProblem(bytes);
+      if (bad) { reject(full); diagnostics.push({ severity: "error", where: `${where}/${f}`, message: `text policy: ${bad.message} [${bad.code}]`, code: bad.code, path: "<root>" }); continue; }
       const doc = parseChecked(full, `${where}/${f}`);
       if (!doc) continue; // reported once by parseChecked; the file is not scanned, loaded or hashed
       for (const fi of scanner.scanParsed(doc, bytes.toString("utf8"), full)) err(`${where}/${f}`, `privacy: ${fi.path || "<file>"}: ${fi.message} [${fi.detector}]`);
@@ -144,13 +157,13 @@ export function validateRoot(rootArg: string, opts: { policyPath?: string } = {}
     const cls = provenanceClass(bp);
     const digest = contentDigest(bp);
     syntheticRule(`${where}/blueprint.yaml metadata.synthetic`, bp.metadata.synthetic);
-    if (purpose === "example" && !bp.spec.descriptor.name.startsWith("[SYNTHETIC]")) err(where, "example blueprint names must start with '[SYNTHETIC]'");
+    if (domain === "synthetic" && !bp.spec.descriptor.name.startsWith("[SYNTHETIC]")) err(where, "synthetic blueprint names must start with '[SYNTHETIC]'");
     const prefix = policy.namespaces.syntheticIdPrefix as string;
-    if (purpose === "example" && !id.startsWith(prefix)) err(where, `example ids must start with '${prefix}'`);
-    if (purpose === "production" && id.startsWith(prefix)) err(where, `ids starting with '${prefix}' are reserved for the synthetic namespace`);
+    if (domain === "synthetic" && !id.startsWith(prefix)) err(where, `synthetic ids must start with '${prefix}'`);
+    if (domain === "production" && id.startsWith(prefix)) err(where, `ids starting with '${prefix}' are reserved for the synthetic namespace`);
     bp.provenance.authors.forEach((a: Doc) => actorRule(`${where} provenance.authors`, a.identity));
 
-    checkBlueprint(bp, vd, where, err, warn);
+    checkBlueprint(bp, vd, where, err, warn, payloadPatterns(policy));
     checkEnvelope(bp, where, err);
     checkOrigin(bp, sources, where, err);
     if (maturity === "canonical") {
@@ -163,21 +176,23 @@ export function validateRoot(rootArg: string, opts: { policyPath?: string } = {}
     let lifecycle = "active";
     if (lc) { lifecycle = lc.state; checkLifecycle(lc, where, err, actorRule); }
 
-    // directory seal
+    // directory seal (zeptly-jcs-v1): sha256(JCS({registry,id,version,payload[]})) over the permitted payload files
     let sealDigest: string | undefined;
     if (exists(join(vd.dir, FILES.integrity))) {
       const integ = load(join(vd.dir, FILES.integrity), "integrity", `${where}/integrity.json`);
       if (integ) {
-        const actual = computeIntegrity(vd.dir);
+        const actual = computeSeal(vd.dir, { registry: REGISTRY_NAME, id, version }, payloadPatterns(policy));
+        if (integ.digestAlgorithm !== DIGEST_ALGORITHM) err(where, `integrity.json digestAlgorithm '${integ.digestAlgorithm}' is not '${DIGEST_ALGORITHM}'`);
+        if (integ.registry !== REGISTRY_NAME || integ.id !== id || integ.version !== version) err(where, "integrity.json registry/id/version do not match the manifest");
         if (integ.digest !== actual.digest) err(where, `sealed content changed: integrity.json digest ${integ.digest} != computed ${actual.digest}`);
-        const a = new Set(Object.keys(actual.files)), b = new Set(Object.keys(integ.files));
-        if (a.size !== b.size || [...a].some((f) => !b.has(f))) err(where, "integrity.json file list does not match directory contents");
+        const listed = JSON.stringify(integ.payload), real = JSON.stringify(actual.payload);
+        if (listed !== real) err(where, "integrity.json payload list does not match the permitted payload files of the directory");
         sealDigest = integ.digest;
       }
     }
 
     const loaded: LoadedVersion = { zone: vd.zone, dir: vd.dir, location: vd.rel, id, version, maturity, blueprint: bp, provenanceClass: cls, lifecycle, digest, sealDigest };
-    evalBest.set(loaded, checkAttestations(loaded, policy, load, syntheticRule, actorRule, purpose, err));
+    evalBest.set(loaded, checkAttestations(loaded, policy, load, syntheticRule, actorRule, domain, err));
     if (maturity === "candidate" && bp.security.approvals.length) err(where, "candidates carry no governance approvals (security.approvals must be empty until promotion)");
     for (const [i, a] of (bp.security.approvals as Doc[]).entries()) {
       actorRule(`${where} security.approvals`, a.identity);
@@ -226,6 +241,12 @@ export function validateRoot(rootArg: string, opts: { policyPath?: string } = {}
       if (canon.length && !canon.every((c) => compareSemver(v.version, c.version) > 0)) err(where, "candidate version must be greater than every canonical version of the same id");
     }
 
+    // a production artifact may never reference the synthetic namespace (Protocol v0.2 §10)
+    if (domain === "production") {
+      for (const r of [...(bp.references as Doc[]), ...((bp.metadata.origin.evolution?.sourceRefs as Doc[] | undefined) ?? [])]) {
+        if (typeof r.id === "string" && r.id.startsWith(policy.namespaces.syntheticIdPrefix)) err(where, `production artifact references synthetic id '${r.id}' [synthetic-reference]`);
+      }
+    }
     // references: structural only; local tiny-agents refs are additionally checked against this root
     for (const r of bp.references as Doc[]) {
       if (r.registry !== REGISTRY_NAME) continue;
@@ -275,7 +296,14 @@ export function validateRoot(rootArg: string, opts: { policyPath?: string } = {}
       if (promRec) checkRecurrence(rec, promRec, `${where} (promotion, class ${v.provenanceClass})`, err);
       if (pol.requireLicenceVerified && bp.spec.lineage.seed?.licence?.status !== "verified") err(where, "promotion requires verified upstream licence");
       if (pol.requireSecurityValidationPassed && bp.spec.lineage.seed?.securityValidation !== "passed") err(where, "promotion requires passed upstream security validation");
-      if (pol.requireEvalPass && (evalBest.get(v) ?? 0) < bp.spec.evaluation.gates.minPassRate) err(where, `promotion requires an evaluation attestation with passRate >= ${bp.spec.evaluation.gates.minPassRate}`);
+      if (pol.requireEvalPass) {
+        // every required suite (here: spec.evaluation.suite) needs a PASSING evaluation attestation bound to this exact suite file and subject
+        const suiteFile = join(v.dir, bp.spec.evaluation.suite);
+        const sd = exists(suiteFile) ? fileDigest(suiteFile) : undefined;
+        const bound = (bp.attestations as Doc[]).filter((a) => a.type === "evaluation" && a.result === "pass" && a.suite?.digest === sd && a.subjectDigest === v.digest);
+        if (!bound.length) err(where, `promotion requires a passing evaluation attestation bound to suite digest ${sd ?? "<missing suite>"} and subject digest ${v.digest} [missing-bound-evaluation]`);
+        else if ((evalBest.get(v) ?? 0) < bp.spec.evaluation.gates.minPassRate) err(where, `promotion requires an evaluation attestation with passRate >= ${bp.spec.evaluation.gates.minPassRate}`);
+      }
       for (const t of pol.requiredAttestations ?? []) if (!bp.attestations.some((a: Doc) => a.type === t)) err(where, `promotion requires an attestation of type '${t}'`);
       const sec = bp.attestations.find((a: Doc) => a.type === "security-review");
       if ((pol.requiredAttestations ?? []).includes("security-review") && sec && sec.outcome !== "pass") err(where, "security-review attestation must have outcome: pass");
@@ -285,7 +313,7 @@ export function validateRoot(rootArg: string, opts: { policyPath?: string } = {}
       err(where, `unexpected failure while applying class policy: ${(e as Error).message}`);
     }
   }
-  return { root, purpose, diagnostics, versions };
+  return { root, domain, diagnostics, versions };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -328,6 +356,9 @@ function checkEnvelope(bp: Doc, where: string, err: Err) {
 /** metadata.origin, spec.lineage and provenance must tell one consistent story. */
 function checkOrigin(bp: Doc, sources: Set<string>, where: string, err: Err) {
   const o = bp.metadata.origin, lin = bp.spec.lineage;
+  // The shared v0.2 vocabulary is accepted by the schema; this registry uses native | upstream-seed | evolved (+ kind discovered | refined).
+  if (!["native", "upstream-seed", "evolved"].includes(o.type)) err(where, `metadata.origin.type '${o.type}' is not used by this registry (native, upstream-seed or evolved; discovered/refined are evolution kinds)`);
+  if (o.evolution && !["discovered", "refined"].includes(o.evolution.kind)) err(where, `metadata.origin.evolution.kind '${o.evolution.kind}' is not supported by this registry (discovered or refined)`);
   const only = (k: string) => Object.keys(lin).filter((x) => x !== k);
   if (o.type === "native") {
     if (!lin.native) err(where, "native blueprints require spec.lineage.native");
@@ -353,7 +384,7 @@ function checkOrigin(bp: Doc, sources: Set<string>, where: string, err: Err) {
   }
 }
 
-function checkBlueprint(bp: Doc, vd: VersionDir, where: string, err: Err, warn: Err) {
+function checkBlueprint(bp: Doc, vd: VersionDir, where: string, err: Err, warn: Err, payload: RegExp[]) {
   const s = bp.spec;
   const unique = (label: string, xs: string[]) => {
     const dup = xs.filter((x, i) => xs.indexOf(x) !== i);
@@ -421,11 +452,12 @@ function checkBlueprint(bp: Doc, vd: VersionDir, where: string, err: Err, warn: 
   const p = s.evaluation.suite;
   if (!inside(p)) err(where, `path '${p}' escapes the version directory`);
   else if (!exists(join(vd.dir, p))) err(where, `referenced file '${p}' does not exist`);
+  else if (!payload.some((re) => re.test(p))) err(where, `evaluation suite '${p}' is not a permitted payload file (policy files.payload), so it would not be sealed`);
 }
 
 /** Verifies every attestation is bound to the CURRENT content digest; returns the best evaluation passRate. */
 function checkAttestations(v: LoadedVersion, policy: Doc, load: (p: string, n: SchemaName, w?: string) => Doc | undefined,
-  syntheticRule: (w: string, f: unknown) => void, actorRule: (w: string, a: unknown) => void, purpose: string, err: Err): number {
+  syntheticRule: (w: string, f: unknown) => void, actorRule: (w: string, a: unknown) => void, domain: string, err: Err): number {
   const bp = v.blueprint, where = v.location;
   let best = 0;
   const suitePath = join(v.dir, bp.spec.evaluation.suite);
@@ -443,8 +475,8 @@ function checkAttestations(v: LoadedVersion, policy: Doc, load: (p: string, n: S
     const aw = `${where} attestations[${i}](${a.type})`;
     if (a.subjectDigest !== v.digest) err(aw, `stale: subjectDigest ${a.subjectDigest} != content digest ${v.digest}`);
     const synthEvidence = a.ref.startsWith(SYNTHETIC_EVIDENCE);
-    if (purpose === "example" && a.ref.startsWith("evidence://") && !synthEvidence) err(aw, `example roots require '${SYNTHETIC_EVIDENCE}' evidence refs`);
-    if (purpose === "production" && synthEvidence) err(aw, "synthetic evidence reference in a production root");
+    if (domain === "synthetic" && a.ref.startsWith("evidence://") && !synthEvidence) err(aw, `synthetic roots require '${SYNTHETIC_EVIDENCE}' evidence refs`);
+    if (domain === "production" && synthEvidence) err(aw, "synthetic evidence reference in a production root");
     if ((a.type === "sanitisation" || a.type === "evaluation") && !a.ref.startsWith("file:")) { err(aw, `${a.type} attestations must reference an in-directory document (file:<path>)`); continue; }
     if (!a.ref.startsWith("file:")) continue;
     const rel = a.ref.slice(5);
@@ -468,12 +500,18 @@ function checkAttestations(v: LoadedVersion, policy: Doc, load: (p: string, n: S
       if (res.subject.id !== v.id) err(aw, "result subject id does not match the artifact");
       if (res.subjectDigest !== v.digest) err(aw, "result subjectDigest does not match the artifact content digest (stale result)");
       if (suite && res.suiteDigest !== fileDigest(suitePath)) err(aw, "result suiteDigest does not match the suite (stale result)");
+      if (suite && a.suite) {
+        if (a.suite.digest !== fileDigest(suitePath)) err(aw, `stale: suite.digest ${a.suite.digest} != suite file digest ${fileDigest(suitePath)} [suite-digest-mismatch]`);
+        if (a.suite.id !== suite.id || a.suite.version !== suite.version) err(aw, `suite id/version '${a.suite.id}@${a.suite.version}' does not match the suite file '${suite.id}@${suite.version}'`);
+      }
       const passed = res.caseResults.filter((c: Doc) => c.passed).length;
       if (res.summary.cases !== res.caseResults.length || res.summary.passed !== passed) err(aw, "result summary does not match caseResults");
       if (Math.abs(res.summary.passRate - passed / res.caseResults.length) > 1e-9) err(aw, "result passRate does not match caseResults");
       if (suite) for (const c of res.caseResults) if (!suite.cases.some((x: Doc) => x.id === c.case)) err(aw, `result names unknown case '${c.case}'`);
-      if (a.outcome === "pass" && res.summary.passRate < bp.spec.evaluation.gates.minPassRate) err(aw, "attestation outcome 'pass' contradicts the result passRate");
-      best = Math.max(best, res.summary.passRate);
+      const meets = res.summary.passRate >= bp.spec.evaluation.gates.minPassRate;
+      if (a.result === "pass" && !meets) err(aw, "attestation result 'pass' contradicts the result passRate");
+      if (a.result === "fail" && meets) err(aw, "attestation result 'fail' contradicts the result passRate");
+      if (a.result === "pass" && a.subjectDigest === v.digest && suite && a.suite?.digest === fileDigest(suitePath)) best = Math.max(best, res.summary.passRate);
     }
   }
   return best;

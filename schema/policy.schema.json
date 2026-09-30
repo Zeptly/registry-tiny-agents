@@ -160,7 +160,8 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "allow"
+        "allow",
+        "payload"
       ],
       "properties": {
         "allow": {
@@ -170,6 +171,14 @@
             "type": "string"
           },
           "description": "Anchored regular expressions matched against the posix path of each file relative to its version directory. Anything else is rejected."
+        },
+        "payload": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          },
+          "description": "Anchored regexes selecting the permitted PAYLOAD files covered by the directory seal. Each must also match files.allow. Metadata (blueprint.yaml, represented by the artifact digest) and mutable/evidence/approval/seal records (lifecycle, integrity, promotion, submission, sanitisation report, eval results) are not payload."
         }
       }
     }

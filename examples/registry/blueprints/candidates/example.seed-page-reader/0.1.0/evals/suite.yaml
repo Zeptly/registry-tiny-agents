@@ -1,4 +1,6 @@
 suiteVersion: eval-suite/v0-provisional
+id: example.seed-page-reader-suite
+version: 1.0.0
 dataProvenance: synthetic
 synthetic: true
 graders:

@@ -38,7 +38,7 @@ blueprints/<candidates|canonical>/<segment(id)>/<version>/     (location derived
   evals/suite.yaml          synthetic evaluation suite
   evals/results/*.yaml      evaluation result documents (canonical: at least one passing attestation)
   lifecycle.yaml            append-only lifecycle history (only mutable file in a canonical dir)
-  integrity.json            seal over every other file          (canonical only)
+  integrity.json            seal over the payload files         (canonical only)
   promotion.yaml            promotion record and gates checked  (canonical only)
   submission.yaml           submission envelope, e.g. from Zep  (optional)
 ```

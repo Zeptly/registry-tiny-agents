@@ -14,3 +14,9 @@ export function compareCodePoints(a: string, b: string): number {
 }
 
 export const sortCodePoints = (xs: readonly string[]): string[] => [...xs].sort(compareCodePoints);
+
+/**
+ * UTF-16 code-unit order: the key ordering RFC 8785 (JCS) mandates for canonical JSON. Used ONLY for JSON canonicalization;
+ * index and path ordering use `compareCodePoints`. The two differ for astral characters vs U+E000..U+FFFF.
+ */
+export const compareUtf16 = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);

@@ -43,8 +43,10 @@ workspace facts must not become global blueprint content. Workspace-private blue
    `email` pattern was not the slow one. A regression test feeds inputs at the file-size cap with a fixed time ceiling.
 8. **Human review.** Promotion requires reviewers by class, including a `privacy` role for evolved blueprints. Nothing
    is auto-merged.
-9. **Root purpose.** A `production` root rejects synthetic content and placeholder identities; an `example` root
-   requires them.
+9. **Root domain.** A `production` root rejects synthetic content and placeholder identities and may never reference the
+   reserved `example.` namespace; a `synthetic` root requires synthetic markers and `evidence://synthetic/` pointers.
+   Parsing is strict (no aliases/anchors/merge keys, no unsupported tags) so hidden or shared content cannot be smuggled
+   through YAML features.
 
 ## Detectors are heuristics
 

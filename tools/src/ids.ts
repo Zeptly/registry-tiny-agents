@@ -18,6 +18,7 @@ export interface RegistryRef {
   id: string;
   version: string;
   digest?: string | null;
+  digestAlgorithm?: string;
 }
 
 export const isRegistryId = (s: string): boolean => ID_RE.test(s) && s.length <= common.$defs.registryId.maxLength;

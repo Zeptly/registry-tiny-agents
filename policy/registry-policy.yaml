@@ -80,6 +80,10 @@ files:
     - "^sanitisation-report\\.yaml$"
     - "^evals/suite\\.yaml$"
     - "^evals/results/[a-z0-9][a-z0-9._-]{0,63}\\.yaml$"
+  # PAYLOAD files covered by the directory seal (Protocol v0.2). Everything else is either the manifest (represented by
+  # the artifact digest) or a mutable/evidence/approval/seal record bound by subjectDigest. Each must also match `allow`.
+  payload:
+    - "^evals/suite\\.yaml$"
 
 # Tenant-privacy and no-concrete-config detectors used by `registry scan` and `registry validate`.
 privacy:

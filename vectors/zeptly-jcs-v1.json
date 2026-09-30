@@ -1,0 +1,3361 @@
+{
+  "vectorsVersion": "1",
+  "digestAlgorithm": "zeptly-jcs-v1",
+  "description": "Language-neutral golden vectors for Zeptly Registry Protocol v0.2 (zeptly-jcs-v1). jcs/digest/seal expected values are produced and re-verified by the independent stdlib Python implementation (vectors/zeptly_jcs_v1.py); parser and lock vectors are hand-specified and run by each registry's own harness. An implementation is conformant only if it reproduces every vector.",
+  "jcs": [
+    {
+      "name": "key-order-ascii",
+      "input": "{\"b\":1,\"a\":[true,null,\"é\"]}",
+      "output": "{\"a\":[true,null,\"é\"],\"b\":1}"
+    },
+    {
+      "name": "utf16-order-fb01-vs-10000",
+      "note": "U+10000 is D800 DC00 in UTF-16 and sorts BEFORE U+FB01; code-point order would reverse them",
+      "input": "{\"\\ud800\\udc00\":2,\"\\ufb01\":1}",
+      "output": "{\"𐀀\":2,\"ﬁ\":1}"
+    },
+    {
+      "name": "utf16-order-e000-vs-10000",
+      "input": "{\"\\ud800\\udc00\":2,\"\\ue000\":1}",
+      "output": "{\"𐀀\":2,\"\":1}"
+    },
+    {
+      "name": "rfc8785-section-3.2.3-keys",
+      "input": "{\"\\u20ac\":\"Euro Sign\",\"\\r\":\"Carriage Return\",\"\\ufb33\":\"Hebrew Letter Dalet With Dagesh\",\"1\":\"One\",\"\\ud83d\\ude00\":\"Emoji: Grinning Face\",\"\\u0080\":\"Control\",\"\\u00f6\":\"Latin Small Letter O With Diaeresis\"}",
+      "output": "{\"\\r\":\"Carriage Return\",\"1\":\"One\",\"\":\"Control\",\"ö\":\"Latin Small Letter O With Diaeresis\",\"€\":\"Euro Sign\",\"😀\":\"Emoji: Grinning Face\",\"דּ\":\"Hebrew Letter Dalet With Dagesh\"}"
+    },
+    {
+      "name": "numbers",
+      "input": "[0.1,1e21,-0,2.5,100,1e-7,4.5,333333333.33333329,1E30,0.000001,123456789012345680000,1.5e300]",
+      "output": "[0.1,1e+21,0,2.5,100,1e-7,4.5,333333333.3333333,1e+30,0.000001,123456789012345680000,1.5e+300]"
+    },
+    {
+      "name": "negative-zero",
+      "input": "[-0.0,0,-0]",
+      "output": "[0,0,0]"
+    },
+    {
+      "name": "string-escapes",
+      "input": "\"a\\\"b\\\\c\\n\\t\\u0001\\u007f\\u2028\\u00e9\\b\\f\\r\"",
+      "output": "\"a\\\"b\\\\c\\n\\t\\u0001 é\\b\\f\\r\""
+    },
+    {
+      "name": "unicode-not-normalised",
+      "note": "NFC and NFD spellings stay distinct",
+      "input": "[\"\\u00e9\",\"e\\u0301\"]",
+      "output": "[\"é\",\"é\"]"
+    },
+    {
+      "name": "empty-and-nested",
+      "input": "{\"z\":{},\"a\":[],\"m\":[{\"b\":[[]],\"a\":{}}]}",
+      "output": "{\"a\":[],\"m\":[{\"a\":{},\"b\":[[]]}],\"z\":{}}"
+    },
+    {
+      "name": "array-order-preserved",
+      "input": "[3,1,2,{\"b\":1,\"a\":2}]",
+      "output": "[3,1,2,{\"a\":2,\"b\":1}]"
+    },
+    {
+      "name": "line-endings-inside-values-kept",
+      "note": "a manifest string value containing CR or LF is not rewritten after parsing",
+      "input": "{\"s\":\"a\\r\\nb\\rc\\nd\"}",
+      "output": "{\"s\":\"a\\r\\nb\\rc\\nd\"}"
+    }
+  ],
+  "digest": {
+    "description": "artifact digest = sha256(JCS(projection)); projection includes apiVersion, kind, metadata.{id,registry,origin,synthetic}, spec, references, provenance, security.{classification,capabilities}",
+    "cases": [
+      {
+        "name": "golden",
+        "doc": {
+          "apiVersion": "registry.zeptly.dev/v1alpha1",
+          "kind": "TinyAgentBlueprint",
+          "metadata": {
+            "id": "golden.example",
+            "version": "9.9.9",
+            "registry": "tiny-agents",
+            "maturity": "candidate",
+            "origin": {
+              "type": "native"
+            },
+            "synthetic": true
+          },
+          "spec": {
+            "z": [
+              1,
+              2.5,
+              0,
+              "é",
+              "𐀀"
+            ],
+            "a": {
+              "ﬁ": 1,
+              "𐀀": 2
+            }
+          },
+          "references": [],
+          "provenance": {
+            "createdAt": "2026-01-01T00:00:00Z",
+            "authors": [],
+            "sourceRefs": [],
+            "transformations": []
+          },
+          "security": {
+            "classification": "internal",
+            "capabilities": [],
+            "approvals": [
+              {
+                "role": "maintainer",
+                "identity": "x",
+                "subjectDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+              }
+            ]
+          },
+          "attestations": [
+            {
+              "type": "evaluation",
+              "ref": "file:x",
+              "subjectDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+            }
+          ]
+        },
+        "sameDigest": [
+          {
+            "name": "version-excluded",
+            "doc": {
+              "apiVersion": "registry.zeptly.dev/v1alpha1",
+              "kind": "TinyAgentBlueprint",
+              "metadata": {
+                "id": "golden.example",
+                "version": "1.0.0",
+                "registry": "tiny-agents",
+                "maturity": "candidate",
+                "origin": {
+                  "type": "native"
+                },
+                "synthetic": true
+              },
+              "spec": {
+                "z": [
+                  1,
+                  2.5,
+                  0,
+                  "é",
+                  "𐀀"
+                ],
+                "a": {
+                  "ﬁ": 1,
+                  "𐀀": 2
+                }
+              },
+              "references": [],
+              "provenance": {
+                "createdAt": "2026-01-01T00:00:00Z",
+                "authors": [],
+                "sourceRefs": [],
+                "transformations": []
+              },
+              "security": {
+                "classification": "internal",
+                "capabilities": [],
+                "approvals": [
+                  {
+                    "role": "maintainer",
+                    "identity": "x",
+                    "subjectDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+                  }
+                ]
+              },
+              "attestations": [
+                {
+                  "type": "evaluation",
+                  "ref": "file:x",
+                  "subjectDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            }
+          },
+          {
+            "name": "maturity-excluded",
+            "doc": {
+              "apiVersion": "registry.zeptly.dev/v1alpha1",
+              "kind": "TinyAgentBlueprint",
+              "metadata": {
+                "id": "golden.example",
+                "version": "9.9.9",
+                "registry": "tiny-agents",
+                "maturity": "canonical",
+                "origin": {
+                  "type": "native"
+                },
+                "synthetic": true
+              },
+              "spec": {
+                "z": [
+                  1,
+                  2.5,
+                  0,
+                  "é",
+                  "𐀀"
+                ],
+                "a": {
+                  "ﬁ": 1,
+                  "𐀀": 2
+                }
+              },
+              "references": [],
+              "provenance": {
+                "createdAt": "2026-01-01T00:00:00Z",
+                "authors": [],
+                "sourceRefs": [],
+                "transformations": []
+              },
+              "security": {
+                "classification": "internal",
+                "capabilities": [],
+                "approvals": [
+                  {
+                    "role": "maintainer",
+                    "identity": "x",
+                    "subjectDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+                  }
+                ]
+              },
+              "attestations": [
+                {
+                  "type": "evaluation",
+                  "ref": "file:x",
+                  "subjectDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            }
+          },
+          {
+            "name": "attestations-excluded",
+            "doc": {
+              "apiVersion": "registry.zeptly.dev/v1alpha1",
+              "kind": "TinyAgentBlueprint",
+              "metadata": {
+                "id": "golden.example",
+                "version": "9.9.9",
+                "registry": "tiny-agents",
+                "maturity": "candidate",
+                "origin": {
+                  "type": "native"
+                },
+                "synthetic": true
+              },
+              "spec": {
+                "z": [
+                  1,
+                  2.5,
+                  0,
+                  "é",
+                  "𐀀"
+                ],
+                "a": {
+                  "ﬁ": 1,
+                  "𐀀": 2
+                }
+              },
+              "references": [],
+              "provenance": {
+                "createdAt": "2026-01-01T00:00:00Z",
+                "authors": [],
+                "sourceRefs": [],
+                "transformations": []
+              },
+              "security": {
+                "classification": "internal",
+                "capabilities": [],
+                "approvals": [
+                  {
+                    "role": "maintainer",
+                    "identity": "x",
+                    "subjectDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+                  }
+                ]
+              },
+              "attestations": []
+            }
+          },
+          {
+            "name": "approvals-excluded",
+            "doc": {
+              "apiVersion": "registry.zeptly.dev/v1alpha1",
+              "kind": "TinyAgentBlueprint",
+              "metadata": {
+                "id": "golden.example",
+                "version": "9.9.9",
+                "registry": "tiny-agents",
+                "maturity": "candidate",
+                "origin": {
+                  "type": "native"
+                },
+                "synthetic": true
+              },
+              "spec": {
+                "z": [
+                  1,
+                  2.5,
+                  0,
+                  "é",
+                  "𐀀"
+                ],
+                "a": {
+                  "ﬁ": 1,
+                  "𐀀": 2
+                }
+              },
+              "references": [],
+              "provenance": {
+                "createdAt": "2026-01-01T00:00:00Z",
+                "authors": [],
+                "sourceRefs": [],
+                "transformations": []
+              },
+              "security": {
+                "classification": "internal",
+                "capabilities": [],
+                "approvals": []
+              },
+              "attestations": [
+                {
+                  "type": "evaluation",
+                  "ref": "file:x",
+                  "subjectDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            }
+          },
+          {
+            "name": "lifecycle-overlay-field-excluded",
+            "doc": {
+              "apiVersion": "registry.zeptly.dev/v1alpha1",
+              "kind": "TinyAgentBlueprint",
+              "metadata": {
+                "id": "golden.example",
+                "version": "9.9.9",
+                "registry": "tiny-agents",
+                "maturity": "candidate",
+                "origin": {
+                  "type": "native"
+                },
+                "synthetic": true,
+                "lifecycle": "revoked"
+              },
+              "spec": {
+                "z": [
+                  1,
+                  2.5,
+                  0,
+                  "é",
+                  "𐀀"
+                ],
+                "a": {
+                  "ﬁ": 1,
+                  "𐀀": 2
+                }
+              },
+              "references": [],
+              "provenance": {
+                "createdAt": "2026-01-01T00:00:00Z",
+                "authors": [],
+                "sourceRefs": [],
+                "transformations": []
+              },
+              "security": {
+                "classification": "internal",
+                "capabilities": [],
+                "approvals": [
+                  {
+                    "role": "maintainer",
+                    "identity": "x",
+                    "subjectDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+                  }
+                ]
+              },
+              "attestations": [
+                {
+                  "type": "evaluation",
+                  "ref": "file:x",
+                  "subjectDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            }
+          },
+          {
+            "name": "source-key-order-irrelevant",
+            "doc": {
+              "attestations": [
+                {
+                  "type": "evaluation",
+                  "ref": "file:x",
+                  "subjectDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+                }
+              ],
+              "security": {
+                "classification": "internal",
+                "capabilities": [],
+                "approvals": [
+                  {
+                    "role": "maintainer",
+                    "identity": "x",
+                    "subjectDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+                  }
+                ]
+              },
+              "provenance": {
+                "createdAt": "2026-01-01T00:00:00Z",
+                "authors": [],
+                "sourceRefs": [],
+                "transformations": []
+              },
+              "references": [],
+              "spec": {
+                "z": [
+                  1,
+                  2.5,
+                  0,
+                  "é",
+                  "𐀀"
+                ],
+                "a": {
+                  "ﬁ": 1,
+                  "𐀀": 2
+                }
+              },
+              "metadata": {
+                "id": "golden.example",
+                "version": "9.9.9",
+                "registry": "tiny-agents",
+                "maturity": "candidate",
+                "origin": {
+                  "type": "native"
+                },
+                "synthetic": true
+              },
+              "kind": "TinyAgentBlueprint",
+              "apiVersion": "registry.zeptly.dev/v1alpha1"
+            }
+          }
+        ],
+        "differentDigest": [
+          {
+            "name": "identity",
+            "doc": {
+              "apiVersion": "registry.zeptly.dev/v1alpha1",
+              "kind": "TinyAgentBlueprint",
+              "metadata": {
+                "id": "golden.other",
+                "version": "9.9.9",
+                "registry": "tiny-agents",
+                "maturity": "candidate",
+                "origin": {
+                  "type": "native"
+                },
+                "synthetic": true
+              },
+              "spec": {
+                "z": [
+                  1,
+                  2.5,
+                  0,
+                  "é",
+                  "𐀀"
+                ],
+                "a": {
+                  "ﬁ": 1,
+                  "𐀀": 2
+                }
+              },
+              "references": [],
+              "provenance": {
+                "createdAt": "2026-01-01T00:00:00Z",
+                "authors": [],
+                "sourceRefs": [],
+                "transformations": []
+              },
+              "security": {
+                "classification": "internal",
+                "capabilities": [],
+                "approvals": [
+                  {
+                    "role": "maintainer",
+                    "identity": "x",
+                    "subjectDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+                  }
+                ]
+              },
+              "attestations": [
+                {
+                  "type": "evaluation",
+                  "ref": "file:x",
+                  "subjectDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            }
+          },
+          {
+            "name": "origin",
+            "doc": {
+              "apiVersion": "registry.zeptly.dev/v1alpha1",
+              "kind": "TinyAgentBlueprint",
+              "metadata": {
+                "id": "golden.example",
+                "version": "9.9.9",
+                "registry": "tiny-agents",
+                "maturity": "candidate",
+                "origin": {
+                  "type": "evolved"
+                },
+                "synthetic": true
+              },
+              "spec": {
+                "z": [
+                  1,
+                  2.5,
+                  0,
+                  "é",
+                  "𐀀"
+                ],
+                "a": {
+                  "ﬁ": 1,
+                  "𐀀": 2
+                }
+              },
+              "references": [],
+              "provenance": {
+                "createdAt": "2026-01-01T00:00:00Z",
+                "authors": [],
+                "sourceRefs": [],
+                "transformations": []
+              },
+              "security": {
+                "classification": "internal",
+                "capabilities": [],
+                "approvals": [
+                  {
+                    "role": "maintainer",
+                    "identity": "x",
+                    "subjectDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+                  }
+                ]
+              },
+              "attestations": [
+                {
+                  "type": "evaluation",
+                  "ref": "file:x",
+                  "subjectDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            }
+          },
+          {
+            "name": "synthetic-marker",
+            "doc": {
+              "apiVersion": "registry.zeptly.dev/v1alpha1",
+              "kind": "TinyAgentBlueprint",
+              "metadata": {
+                "id": "golden.example",
+                "version": "9.9.9",
+                "registry": "tiny-agents",
+                "maturity": "candidate",
+                "origin": {
+                  "type": "native"
+                },
+                "synthetic": false
+              },
+              "spec": {
+                "z": [
+                  1,
+                  2.5,
+                  0,
+                  "é",
+                  "𐀀"
+                ],
+                "a": {
+                  "ﬁ": 1,
+                  "𐀀": 2
+                }
+              },
+              "references": [],
+              "provenance": {
+                "createdAt": "2026-01-01T00:00:00Z",
+                "authors": [],
+                "sourceRefs": [],
+                "transformations": []
+              },
+              "security": {
+                "classification": "internal",
+                "capabilities": [],
+                "approvals": [
+                  {
+                    "role": "maintainer",
+                    "identity": "x",
+                    "subjectDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+                  }
+                ]
+              },
+              "attestations": [
+                {
+                  "type": "evaluation",
+                  "ref": "file:x",
+                  "subjectDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            }
+          },
+          {
+            "name": "spec",
+            "doc": {
+              "apiVersion": "registry.zeptly.dev/v1alpha1",
+              "kind": "TinyAgentBlueprint",
+              "metadata": {
+                "id": "golden.example",
+                "version": "9.9.9",
+                "registry": "tiny-agents",
+                "maturity": "candidate",
+                "origin": {
+                  "type": "native"
+                },
+                "synthetic": true
+              },
+              "spec": {
+                "z": [
+                  1,
+                  2.5,
+                  0,
+                  "é",
+                  "𐀀",
+                  3
+                ],
+                "a": {
+                  "ﬁ": 1,
+                  "𐀀": 2
+                }
+              },
+              "references": [],
+              "provenance": {
+                "createdAt": "2026-01-01T00:00:00Z",
+                "authors": [],
+                "sourceRefs": [],
+                "transformations": []
+              },
+              "security": {
+                "classification": "internal",
+                "capabilities": [],
+                "approvals": [
+                  {
+                    "role": "maintainer",
+                    "identity": "x",
+                    "subjectDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+                  }
+                ]
+              },
+              "attestations": [
+                {
+                  "type": "evaluation",
+                  "ref": "file:x",
+                  "subjectDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            }
+          },
+          {
+            "name": "references",
+            "doc": {
+              "apiVersion": "registry.zeptly.dev/v1alpha1",
+              "kind": "TinyAgentBlueprint",
+              "metadata": {
+                "id": "golden.example",
+                "version": "9.9.9",
+                "registry": "tiny-agents",
+                "maturity": "candidate",
+                "origin": {
+                  "type": "native"
+                },
+                "synthetic": true
+              },
+              "spec": {
+                "z": [
+                  1,
+                  2.5,
+                  0,
+                  "é",
+                  "𐀀"
+                ],
+                "a": {
+                  "ﬁ": 1,
+                  "𐀀": 2
+                }
+              },
+              "references": [
+                {
+                  "registry": "skills",
+                  "id": "a.b",
+                  "version": "1.0.0"
+                }
+              ],
+              "provenance": {
+                "createdAt": "2026-01-01T00:00:00Z",
+                "authors": [],
+                "sourceRefs": [],
+                "transformations": []
+              },
+              "security": {
+                "classification": "internal",
+                "capabilities": [],
+                "approvals": [
+                  {
+                    "role": "maintainer",
+                    "identity": "x",
+                    "subjectDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+                  }
+                ]
+              },
+              "attestations": [
+                {
+                  "type": "evaluation",
+                  "ref": "file:x",
+                  "subjectDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            }
+          },
+          {
+            "name": "provenance",
+            "doc": {
+              "apiVersion": "registry.zeptly.dev/v1alpha1",
+              "kind": "TinyAgentBlueprint",
+              "metadata": {
+                "id": "golden.example",
+                "version": "9.9.9",
+                "registry": "tiny-agents",
+                "maturity": "candidate",
+                "origin": {
+                  "type": "native"
+                },
+                "synthetic": true
+              },
+              "spec": {
+                "z": [
+                  1,
+                  2.5,
+                  0,
+                  "é",
+                  "𐀀"
+                ],
+                "a": {
+                  "ﬁ": 1,
+                  "𐀀": 2
+                }
+              },
+              "references": [],
+              "provenance": {
+                "createdAt": "2026-01-01T00:00:00Z",
+                "authors": [
+                  {
+                    "kind": "human",
+                    "identity": "x"
+                  }
+                ],
+                "sourceRefs": [],
+                "transformations": []
+              },
+              "security": {
+                "classification": "internal",
+                "capabilities": [],
+                "approvals": [
+                  {
+                    "role": "maintainer",
+                    "identity": "x",
+                    "subjectDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+                  }
+                ]
+              },
+              "attestations": [
+                {
+                  "type": "evaluation",
+                  "ref": "file:x",
+                  "subjectDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            }
+          },
+          {
+            "name": "security-classification",
+            "doc": {
+              "apiVersion": "registry.zeptly.dev/v1alpha1",
+              "kind": "TinyAgentBlueprint",
+              "metadata": {
+                "id": "golden.example",
+                "version": "9.9.9",
+                "registry": "tiny-agents",
+                "maturity": "candidate",
+                "origin": {
+                  "type": "native"
+                },
+                "synthetic": true
+              },
+              "spec": {
+                "z": [
+                  1,
+                  2.5,
+                  0,
+                  "é",
+                  "𐀀"
+                ],
+                "a": {
+                  "ﬁ": 1,
+                  "𐀀": 2
+                }
+              },
+              "references": [],
+              "provenance": {
+                "createdAt": "2026-01-01T00:00:00Z",
+                "authors": [],
+                "sourceRefs": [],
+                "transformations": []
+              },
+              "security": {
+                "classification": "restricted",
+                "capabilities": [],
+                "approvals": [
+                  {
+                    "role": "maintainer",
+                    "identity": "x",
+                    "subjectDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+                  }
+                ]
+              },
+              "attestations": [
+                {
+                  "type": "evaluation",
+                  "ref": "file:x",
+                  "subjectDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            }
+          },
+          {
+            "name": "security-capabilities",
+            "doc": {
+              "apiVersion": "registry.zeptly.dev/v1alpha1",
+              "kind": "TinyAgentBlueprint",
+              "metadata": {
+                "id": "golden.example",
+                "version": "9.9.9",
+                "registry": "tiny-agents",
+                "maturity": "candidate",
+                "origin": {
+                  "type": "native"
+                },
+                "synthetic": true
+              },
+              "spec": {
+                "z": [
+                  1,
+                  2.5,
+                  0,
+                  "é",
+                  "𐀀"
+                ],
+                "a": {
+                  "ﬁ": 1,
+                  "𐀀": 2
+                }
+              },
+              "references": [],
+              "provenance": {
+                "createdAt": "2026-01-01T00:00:00Z",
+                "authors": [],
+                "sourceRefs": [],
+                "transformations": []
+              },
+              "security": {
+                "classification": "internal",
+                "capabilities": [
+                  {
+                    "capability": "a.b",
+                    "effect": "reversible"
+                  }
+                ],
+                "approvals": [
+                  {
+                    "role": "maintainer",
+                    "identity": "x",
+                    "subjectDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+                  }
+                ]
+              },
+              "attestations": [
+                {
+                  "type": "evaluation",
+                  "ref": "file:x",
+                  "subjectDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            }
+          },
+          {
+            "name": "runtime-approval-requirement-in-spec",
+            "doc": {
+              "apiVersion": "registry.zeptly.dev/v1alpha1",
+              "kind": "TinyAgentBlueprint",
+              "metadata": {
+                "id": "golden.example",
+                "version": "9.9.9",
+                "registry": "tiny-agents",
+                "maturity": "candidate",
+                "origin": {
+                  "type": "native"
+                },
+                "synthetic": true
+              },
+              "spec": {
+                "z": [
+                  1,
+                  2.5,
+                  0,
+                  "é",
+                  "𐀀"
+                ],
+                "a": {
+                  "ﬁ": 1,
+                  "𐀀": 2
+                },
+                "capabilities": [
+                  {
+                    "key": "x",
+                    "approval": "required"
+                  }
+                ]
+              },
+              "references": [],
+              "provenance": {
+                "createdAt": "2026-01-01T00:00:00Z",
+                "authors": [],
+                "sourceRefs": [],
+                "transformations": []
+              },
+              "security": {
+                "classification": "internal",
+                "capabilities": [],
+                "approvals": [
+                  {
+                    "role": "maintainer",
+                    "identity": "x",
+                    "subjectDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+                  }
+                ]
+              },
+              "attestations": [
+                {
+                  "type": "evaluation",
+                  "ref": "file:x",
+                  "subjectDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+                }
+              ]
+            }
+          }
+        ],
+        "digest": "sha256:357a73958dd6c2be1b27944d5e98fd120ebbc2769932041082d5502363254caa"
+      }
+    ]
+  },
+  "seal": {
+    "description": "seal = sha256(JCS({registry,id,version,payload})); payload = files matching payloadPatterns with bare-hex SHA-256, ordered by code-point path order. Lifecycle, integrity, promotion, submission, sanitisation report, evaluation results and the manifest are not payload.",
+    "payloadPatterns": [
+      "^evals/suite\\.yaml$"
+    ],
+    "cases": [
+      {
+        "name": "suite-only",
+        "subject": {
+          "registry": "tiny-agents",
+          "id": "golden.example",
+          "version": "1.0.0"
+        },
+        "files": {
+          "blueprint.yaml": "a: 1\n",
+          "evals/suite.yaml": "b: 2\n",
+          "evals/results/r.yaml": "d: 4\n",
+          "promotion.yaml": "c: 3\n",
+          "lifecycle.yaml": "state: active\n",
+          "integrity.json": "{}\n"
+        },
+        "sameSeal": [
+          {
+            "name": "lifecycle-change",
+            "files": {
+              "lifecycle.yaml": "state: revoked\n"
+            }
+          },
+          {
+            "name": "manifest-change",
+            "files": {
+              "blueprint.yaml": "a: 99\n"
+            }
+          },
+          {
+            "name": "evidence-change",
+            "files": {
+              "evals/results/r.yaml": "d: 5\n",
+              "promotion.yaml": "c: 9\n"
+            }
+          }
+        ],
+        "differentSeal": [
+          {
+            "name": "payload-mutation",
+            "files": {
+              "evals/suite.yaml": "b: 3\n"
+            }
+          },
+          {
+            "name": "payload-removed",
+            "remove": [
+              "evals/suite.yaml"
+            ]
+          },
+          {
+            "name": "version",
+            "subject": {
+              "registry": "tiny-agents",
+              "id": "golden.example",
+              "version": "1.0.1"
+            }
+          },
+          {
+            "name": "id",
+            "subject": {
+              "registry": "tiny-agents",
+              "id": "golden.other",
+              "version": "1.0.0"
+            }
+          }
+        ],
+        "payload": [
+          {
+            "path": "evals/suite.yaml",
+            "sha256": "d4eed209fa44e2eb45f5dbe26726d1985cef0bc7b9a2c923a8d7e8003662234e"
+          }
+        ],
+        "seal": "sha256:e67a39c5c9b2c337a66d791f938a2c0cde099b6b5e9eb9d7404ecea48c659e6a"
+      },
+      {
+        "name": "two-payload-files-code-point-order",
+        "subject": {
+          "registry": "tiny-agents",
+          "id": "golden.two",
+          "version": "2.0.0"
+        },
+        "files": {
+          "evals/suite.yaml": "é\n"
+        },
+        "payload": [
+          {
+            "path": "evals/suite.yaml",
+            "sha256": "edd3a863872a04239eb29ad4bc12fc892b3d4ae57cc7e786a3697816f8e141c2"
+          }
+        ],
+        "seal": "sha256:64c6297af5452a0d1b4a4861e616d3267280b97fe5e51745ef771188a4bf0a3a"
+      }
+    ],
+    "reject": [
+      {
+        "name": "crlf-payload",
+        "files": {
+          "evals/suite.yaml": {
+            "hex": "613a20310d0a"
+          }
+        },
+        "code": "carriage-return"
+      },
+      {
+        "name": "lone-cr-payload",
+        "files": {
+          "evals/suite.yaml": {
+            "hex": "613a20310d"
+          }
+        },
+        "code": "carriage-return"
+      },
+      {
+        "name": "bom-payload",
+        "files": {
+          "evals/suite.yaml": {
+            "hex": "efbbbf613a20310a"
+          }
+        },
+        "code": "bom"
+      },
+      {
+        "name": "nul-payload",
+        "files": {
+          "evals/suite.yaml": {
+            "hex": "613a00310a"
+          }
+        },
+        "code": "nul"
+      },
+      {
+        "name": "invalid-utf8-payload",
+        "files": {
+          "evals/suite.yaml": {
+            "hex": "c328"
+          }
+        },
+        "code": "invalid-utf8"
+      },
+      {
+        "name": "encoded-lone-surrogate-payload",
+        "files": {
+          "evals/suite.yaml": {
+            "hex": "eda080"
+          }
+        },
+        "code": "invalid-utf8"
+      },
+      {
+        "name": "case-colliding-paths",
+        "files": {
+          "evals/suite.yaml": {
+            "hex": "610a"
+          },
+          "Evals/Suite.yaml": {
+            "hex": "610a"
+          }
+        },
+        "code": "case-collision"
+      }
+    ]
+  },
+  "parser": {
+    "description": "JSON-compatible YAML subset (Protocol v0.2 section 2). accept: parsing yields exactly `value`. reject: parsing yields no document and a diagnostic with `code` (and `path` when given); a CLI maps this to exit code 2. `text` is UTF-8; `hex` gives raw bytes.",
+    "accept": [
+      {
+        "name": "plain-map",
+        "format": "yaml",
+        "text": "a: 1\nb: [true, null, x]\n",
+        "value": {
+          "a": 1,
+          "b": [
+            true,
+            null,
+            "x"
+          ]
+        }
+      },
+      {
+        "name": "yes-no-on-off-are-strings",
+        "format": "yaml",
+        "text": "a: yes\nb: no\non: off\n",
+        "value": {
+          "a": "yes",
+          "b": "no",
+          "on": "off"
+        }
+      },
+      {
+        "name": "timestamps-stay-strings",
+        "format": "yaml",
+        "text": "t: 2026-01-01T00:00:00Z\nd: 2026-01-01\n",
+        "value": {
+          "t": "2026-01-01T00:00:00Z",
+          "d": "2026-01-01"
+        }
+      },
+      {
+        "name": "explicit-str-tag",
+        "format": "yaml",
+        "text": "a: !!str 123\n",
+        "value": {
+          "a": "123"
+        }
+      },
+      {
+        "name": "decimal-numbers",
+        "format": "yaml",
+        "text": "a: -9007199254740991\nb: 9007199254740991\nc: 0.5\nd: 1.0\ne: 1e3\nf: 1E-2\n",
+        "value": {
+          "a": -9007199254740991,
+          "b": 9007199254740991,
+          "c": 0.5,
+          "d": 1.0,
+          "e": 1000,
+          "f": 0.01
+        }
+      },
+      {
+        "name": "null-spellings",
+        "format": "yaml",
+        "text": "a: null\nb: ~\nc:\n",
+        "value": {
+          "a": null,
+          "b": null,
+          "c": null
+        }
+      },
+      {
+        "name": "quoted-merge-key-is-a-plain-key",
+        "format": "yaml",
+        "text": "\"<<\": 1\n",
+        "value": {
+          "<<": 1
+        }
+      },
+      {
+        "name": "block-scalar-keeps-lf",
+        "format": "yaml",
+        "text": "s: |\n  a\n  b\n",
+        "value": {
+          "s": "a\nb\n"
+        }
+      },
+      {
+        "name": "unicode-not-normalised",
+        "format": "yaml",
+        "text": "a: \"\\u00e9\"\nb: \"e\\u0301\"\n",
+        "value": {
+          "a": "é",
+          "b": "é"
+        }
+      },
+      {
+        "name": "json-input",
+        "format": "json",
+        "text": "{\"a\": [1, 2.5, \"x\"], \"b\": {\"c\": null}}",
+        "value": {
+          "a": [
+            1,
+            2.5,
+            "x"
+          ],
+          "b": {
+            "c": null
+          }
+        }
+      },
+      {
+        "name": "crlf-inside-quoted-escape-is-a-value-not-a-line-ending",
+        "format": "yaml",
+        "text": "s: \"a\\r\\nb\"\n",
+        "value": {
+          "s": "a\r\nb"
+        }
+      }
+    ],
+    "reject": [
+      {
+        "name": "duplicate-key",
+        "format": "yaml",
+        "text": "a: 1\nb: 2\na: 3\n",
+        "code": "duplicate-key",
+        "path": "a"
+      },
+      {
+        "name": "duplicate-key-nested",
+        "format": "yaml",
+        "text": "x:\n  a: 1\n  a: 2\n",
+        "code": "duplicate-key",
+        "path": "x.a"
+      },
+      {
+        "name": "duplicate-key-json",
+        "format": "json",
+        "text": "{\"a\":1,\"a\":2}",
+        "code": "duplicate-key",
+        "path": "a"
+      },
+      {
+        "name": "anchor",
+        "format": "yaml",
+        "text": "a: &x 1\n",
+        "code": "anchor",
+        "path": "a"
+      },
+      {
+        "name": "alias",
+        "format": "yaml",
+        "text": "a: &x 1\nb: *x\n",
+        "code": "alias"
+      },
+      {
+        "name": "merge-key",
+        "format": "yaml",
+        "text": "base: &b {a: 1}\nm:\n  <<: *b\n",
+        "code": "merge-key"
+      },
+      {
+        "name": "multiple-documents",
+        "format": "yaml",
+        "text": "a: 1\n---\nb: 2\n",
+        "code": "multiple-documents"
+      },
+      {
+        "name": "non-string-key-int",
+        "format": "yaml",
+        "text": "1: a\n",
+        "code": "non-string-key"
+      },
+      {
+        "name": "non-string-key-bool",
+        "format": "yaml",
+        "text": "true: a\n",
+        "code": "non-string-key"
+      },
+      {
+        "name": "non-string-key-null",
+        "format": "yaml",
+        "text": "null: a\n",
+        "code": "non-string-key"
+      },
+      {
+        "name": "complex-key",
+        "format": "yaml",
+        "text": "? [a, b]\n: c\n",
+        "code": "non-string-key"
+      },
+      {
+        "name": "tag-binary",
+        "format": "yaml",
+        "text": "a: !!binary aGVsbG8=\n",
+        "code": "unsupported-tag",
+        "path": "a"
+      },
+      {
+        "name": "tag-timestamp",
+        "format": "yaml",
+        "text": "a: !!timestamp 2026-01-01\n",
+        "code": "unsupported-tag",
+        "path": "a"
+      },
+      {
+        "name": "tag-set",
+        "format": "yaml",
+        "text": "a: !!set {x, y}\n",
+        "code": "unsupported-tag",
+        "path": "a"
+      },
+      {
+        "name": "tag-custom",
+        "format": "yaml",
+        "text": "a: !custom x\n",
+        "code": "unsupported-tag",
+        "path": "a"
+      },
+      {
+        "name": "hex-integer",
+        "format": "yaml",
+        "text": "a: 0x10\n",
+        "code": "unsupported-number-syntax",
+        "path": "a"
+      },
+      {
+        "name": "octal-integer",
+        "format": "yaml",
+        "text": "a: 0o17\n",
+        "code": "unsupported-number-syntax",
+        "path": "a"
+      },
+      {
+        "name": "leading-zero",
+        "format": "yaml",
+        "text": "a: 010\n",
+        "code": "unsupported-number-syntax",
+        "path": "a"
+      },
+      {
+        "name": "plus-sign",
+        "format": "yaml",
+        "text": "a: +1\n",
+        "code": "unsupported-number-syntax",
+        "path": "a"
+      },
+      {
+        "name": "leading-dot",
+        "format": "yaml",
+        "text": "a: .5\n",
+        "code": "unsupported-number-syntax",
+        "path": "a"
+      },
+      {
+        "name": "trailing-dot",
+        "format": "yaml",
+        "text": "a: 5.\n",
+        "code": "unsupported-number-syntax",
+        "path": "a"
+      },
+      {
+        "name": "infinity",
+        "format": "yaml",
+        "text": "a: .inf\n",
+        "code": "non-finite-number",
+        "path": "a"
+      },
+      {
+        "name": "negative-infinity",
+        "format": "yaml",
+        "text": "a: -.inf\n",
+        "code": "non-finite-number",
+        "path": "a"
+      },
+      {
+        "name": "nan",
+        "format": "yaml",
+        "text": "a: .nan\n",
+        "code": "non-finite-number",
+        "path": "a"
+      },
+      {
+        "name": "overflow-to-infinity",
+        "format": "yaml",
+        "text": "a: 1e400\n",
+        "code": "non-finite-number",
+        "path": "a"
+      },
+      {
+        "name": "unsafe-integer",
+        "format": "yaml",
+        "text": "a: 9007199254740993\n",
+        "code": "unsafe-integer",
+        "path": "a"
+      },
+      {
+        "name": "unsafe-negative-integer",
+        "format": "yaml",
+        "text": "a: -9007199254740993\n",
+        "code": "unsafe-integer",
+        "path": "a"
+      },
+      {
+        "name": "unsafe-integer-float-spelling",
+        "format": "yaml",
+        "text": "a: 9007199254740993.0\n",
+        "code": "unsafe-integer",
+        "path": "a"
+      },
+      {
+        "name": "unsafe-integer-exponent-spelling",
+        "format": "yaml",
+        "text": "a: 9.007199254740993e15\n",
+        "code": "unsafe-integer",
+        "path": "a"
+      },
+      {
+        "name": "unsafe-integer-1e21",
+        "format": "yaml",
+        "text": "a: 1e21\n",
+        "code": "unsafe-integer",
+        "path": "a"
+      },
+      {
+        "name": "unsafe-integer-json",
+        "format": "json",
+        "text": "{\"a\": 12345678901234567890}",
+        "code": "unsafe-integer",
+        "path": "a"
+      },
+      {
+        "name": "lone-surrogate-escape",
+        "format": "yaml",
+        "text": "a: \"\\ud800\"\n",
+        "code": "lone-surrogate",
+        "path": "a"
+      },
+      {
+        "name": "lone-surrogate-escape-json",
+        "format": "json",
+        "text": "{\"a\":\"\\ud800\"}",
+        "code": "lone-surrogate",
+        "path": "a"
+      },
+      {
+        "name": "lone-surrogate-in-key",
+        "format": "yaml",
+        "text": "\"\\udc00\": 1\n",
+        "code": "lone-surrogate"
+      },
+      {
+        "name": "invalid-utf8",
+        "format": "yaml",
+        "hex": "613a20c328",
+        "code": "invalid-utf8"
+      },
+      {
+        "name": "encoded-surrogate-bytes",
+        "format": "yaml",
+        "hex": "613a20eda080",
+        "code": "invalid-utf8"
+      },
+      {
+        "name": "bom",
+        "format": "yaml",
+        "hex": "efbbbf613a20310a",
+        "code": "bom"
+      },
+      {
+        "name": "nul",
+        "format": "yaml",
+        "hex": "613a2000310a",
+        "code": "nul"
+      },
+      {
+        "name": "crlf",
+        "format": "yaml",
+        "hex": "613a20310d0a",
+        "code": "carriage-return"
+      },
+      {
+        "name": "lone-cr",
+        "format": "yaml",
+        "hex": "613a20310d",
+        "code": "carriage-return"
+      },
+      {
+        "name": "syntax-error",
+        "format": "yaml",
+        "text": "a: [1, 2\n",
+        "code": "syntax-error"
+      },
+      {
+        "name": "empty-document",
+        "format": "yaml",
+        "text": "",
+        "code": "empty-document"
+      },
+      {
+        "name": "root-is-a-list",
+        "format": "yaml",
+        "text": "- a\n- b\n",
+        "code": "unsupported-type"
+      },
+      {
+        "name": "invalid-json-trailing-comma",
+        "format": "json",
+        "text": "{\"a\":1,}",
+        "code": "invalid-json"
+      },
+      {
+        "name": "invalid-json-nan",
+        "format": "json",
+        "text": "{\"a\":NaN}",
+        "code": "invalid-json"
+      }
+    ]
+  },
+  "lock": {
+    "description": "Resolver/RuntimeLock vectors (Protocol v0.2 section 6). `expect` is a summary of each entry; `fullLock` pins the exact lock shape. Transitive resolution and cycle detection are out of scope.",
+    "cases": [
+      {
+        "name": "resolved-by-range",
+        "domain": "production",
+        "allowCandidates": false,
+        "subject": {
+          "registry": "tiny-agents",
+          "id": "example.subject",
+          "version": "1.0.0",
+          "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000abc"
+        },
+        "indexes": [
+          {
+            "apiVersion": "registry.zeptly.dev/v1alpha1",
+            "kind": "RegistryIndex",
+            "registry": "skills",
+            "digestAlgorithm": "zeptly-jcs-v1",
+            "domain": "production",
+            "entries": [
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "1.0.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/1.0.0",
+                "domain": "production"
+              },
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "1.2.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/1.2.0",
+                "domain": "production"
+              },
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "2.0.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000003",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/2.0.0",
+                "domain": "production"
+              }
+            ]
+          }
+        ],
+        "refs": [
+          {
+            "registry": "skills",
+            "id": "source-evaluation",
+            "version": "^1.0.0"
+          }
+        ],
+        "expect": {
+          "complete": true,
+          "entries": [
+            {
+              "status": "resolved",
+              "version": "1.2.0",
+              "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000002"
+            }
+          ]
+        }
+      },
+      {
+        "name": "no-peer-index-is-explicit",
+        "domain": "production",
+        "allowCandidates": false,
+        "subject": {
+          "registry": "tiny-agents",
+          "id": "example.subject",
+          "version": "1.0.0",
+          "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000abc"
+        },
+        "indexes": [],
+        "refs": [
+          {
+            "registry": "skills",
+            "id": "source-evaluation",
+            "version": "^1.0.0"
+          }
+        ],
+        "expect": {
+          "complete": false,
+          "entries": [
+            {
+              "status": "unresolved",
+              "code": "no-peer-index"
+            }
+          ]
+        }
+      },
+      {
+        "name": "not-found",
+        "domain": "production",
+        "allowCandidates": false,
+        "subject": {
+          "registry": "tiny-agents",
+          "id": "example.subject",
+          "version": "1.0.0",
+          "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000abc"
+        },
+        "indexes": [
+          {
+            "apiVersion": "registry.zeptly.dev/v1alpha1",
+            "kind": "RegistryIndex",
+            "registry": "skills",
+            "digestAlgorithm": "zeptly-jcs-v1",
+            "domain": "production",
+            "entries": [
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "1.0.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/1.0.0",
+                "domain": "production"
+              },
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "1.2.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/1.2.0",
+                "domain": "production"
+              },
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "2.0.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000003",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/2.0.0",
+                "domain": "production"
+              }
+            ]
+          }
+        ],
+        "refs": [
+          {
+            "registry": "skills",
+            "id": "other.skill",
+            "version": "^1.0.0"
+          }
+        ],
+        "expect": {
+          "complete": false,
+          "entries": [
+            {
+              "status": "unresolved",
+              "code": "not-found"
+            }
+          ]
+        }
+      },
+      {
+        "name": "candidate-needs-opt-in",
+        "domain": "production",
+        "allowCandidates": false,
+        "subject": {
+          "registry": "tiny-agents",
+          "id": "example.subject",
+          "version": "1.0.0",
+          "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000abc"
+        },
+        "indexes": [
+          {
+            "apiVersion": "registry.zeptly.dev/v1alpha1",
+            "kind": "RegistryIndex",
+            "registry": "skills",
+            "digestAlgorithm": "zeptly-jcs-v1",
+            "domain": "production",
+            "entries": [
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "0.1.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000004",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "candidate",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/0.1.0",
+                "domain": "production"
+              }
+            ]
+          }
+        ],
+        "refs": [
+          {
+            "registry": "skills",
+            "id": "source-evaluation",
+            "version": "^0.1.0"
+          }
+        ],
+        "expect": {
+          "complete": false,
+          "entries": [
+            {
+              "status": "unresolved",
+              "code": "no-eligible-version"
+            }
+          ]
+        }
+      },
+      {
+        "name": "candidate-with-opt-in",
+        "domain": "production",
+        "allowCandidates": true,
+        "subject": {
+          "registry": "tiny-agents",
+          "id": "example.subject",
+          "version": "1.0.0",
+          "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000abc"
+        },
+        "indexes": [
+          {
+            "apiVersion": "registry.zeptly.dev/v1alpha1",
+            "kind": "RegistryIndex",
+            "registry": "skills",
+            "digestAlgorithm": "zeptly-jcs-v1",
+            "domain": "production",
+            "entries": [
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "0.1.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000004",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "candidate",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/0.1.0",
+                "domain": "production"
+              }
+            ]
+          }
+        ],
+        "refs": [
+          {
+            "registry": "skills",
+            "id": "source-evaluation",
+            "version": "^0.1.0"
+          }
+        ],
+        "expect": {
+          "complete": true,
+          "entries": [
+            {
+              "status": "resolved",
+              "version": "0.1.0",
+              "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000004"
+            }
+          ]
+        }
+      },
+      {
+        "name": "revoked-never-resolves-even-by-exact-pin",
+        "domain": "production",
+        "allowCandidates": true,
+        "subject": {
+          "registry": "tiny-agents",
+          "id": "example.subject",
+          "version": "1.0.0",
+          "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000abc"
+        },
+        "indexes": [
+          {
+            "apiVersion": "registry.zeptly.dev/v1alpha1",
+            "kind": "RegistryIndex",
+            "registry": "skills",
+            "digestAlgorithm": "zeptly-jcs-v1",
+            "domain": "production",
+            "entries": [
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "1.0.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "revoked",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/1.0.0",
+                "domain": "production"
+              }
+            ]
+          }
+        ],
+        "refs": [
+          {
+            "registry": "skills",
+            "id": "source-evaluation",
+            "version": "1.0.0"
+          }
+        ],
+        "expect": {
+          "complete": false,
+          "entries": [
+            {
+              "status": "unresolved",
+              "code": "no-eligible-version"
+            }
+          ]
+        }
+      },
+      {
+        "name": "deprecated-not-by-range",
+        "domain": "production",
+        "allowCandidates": false,
+        "subject": {
+          "registry": "tiny-agents",
+          "id": "example.subject",
+          "version": "1.0.0",
+          "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000abc"
+        },
+        "indexes": [
+          {
+            "apiVersion": "registry.zeptly.dev/v1alpha1",
+            "kind": "RegistryIndex",
+            "registry": "skills",
+            "digestAlgorithm": "zeptly-jcs-v1",
+            "domain": "production",
+            "entries": [
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "1.0.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "deprecated",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/1.0.0",
+                "domain": "production"
+              }
+            ]
+          }
+        ],
+        "refs": [
+          {
+            "registry": "skills",
+            "id": "source-evaluation",
+            "version": "^1.0.0"
+          }
+        ],
+        "expect": {
+          "complete": false,
+          "entries": [
+            {
+              "status": "unresolved",
+              "code": "no-eligible-version"
+            }
+          ]
+        }
+      },
+      {
+        "name": "deprecated-by-exact-pin",
+        "domain": "production",
+        "allowCandidates": false,
+        "subject": {
+          "registry": "tiny-agents",
+          "id": "example.subject",
+          "version": "1.0.0",
+          "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000abc"
+        },
+        "indexes": [
+          {
+            "apiVersion": "registry.zeptly.dev/v1alpha1",
+            "kind": "RegistryIndex",
+            "registry": "skills",
+            "digestAlgorithm": "zeptly-jcs-v1",
+            "domain": "production",
+            "entries": [
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "1.0.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "deprecated",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/1.0.0",
+                "domain": "production"
+              }
+            ]
+          }
+        ],
+        "refs": [
+          {
+            "registry": "skills",
+            "id": "source-evaluation",
+            "version": "1.0.0"
+          }
+        ],
+        "expect": {
+          "complete": true,
+          "entries": [
+            {
+              "status": "resolved",
+              "version": "1.0.0",
+              "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000001"
+            }
+          ]
+        }
+      },
+      {
+        "name": "prerelease-needs-prerelease-range",
+        "domain": "production",
+        "allowCandidates": false,
+        "subject": {
+          "registry": "tiny-agents",
+          "id": "example.subject",
+          "version": "1.0.0",
+          "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000abc"
+        },
+        "indexes": [
+          {
+            "apiVersion": "registry.zeptly.dev/v1alpha1",
+            "kind": "RegistryIndex",
+            "registry": "skills",
+            "digestAlgorithm": "zeptly-jcs-v1",
+            "domain": "production",
+            "entries": [
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "1.1.0-beta.1",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000005",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/1.1.0-beta.1",
+                "domain": "production"
+              },
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "1.0.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/1.0.0",
+                "domain": "production"
+              }
+            ]
+          }
+        ],
+        "refs": [
+          {
+            "registry": "skills",
+            "id": "source-evaluation",
+            "version": "^1.0.0"
+          }
+        ],
+        "expect": {
+          "complete": true,
+          "entries": [
+            {
+              "status": "resolved",
+              "version": "1.0.0",
+              "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000001"
+            }
+          ]
+        }
+      },
+      {
+        "name": "prerelease-named-by-range",
+        "domain": "production",
+        "allowCandidates": false,
+        "subject": {
+          "registry": "tiny-agents",
+          "id": "example.subject",
+          "version": "1.0.0",
+          "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000abc"
+        },
+        "indexes": [
+          {
+            "apiVersion": "registry.zeptly.dev/v1alpha1",
+            "kind": "RegistryIndex",
+            "registry": "skills",
+            "digestAlgorithm": "zeptly-jcs-v1",
+            "domain": "production",
+            "entries": [
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "1.1.0-beta.1",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000005",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/1.1.0-beta.1",
+                "domain": "production"
+              },
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "1.0.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/1.0.0",
+                "domain": "production"
+              }
+            ]
+          }
+        ],
+        "refs": [
+          {
+            "registry": "skills",
+            "id": "source-evaluation",
+            "version": ">=1.1.0-beta.1 <1.1.0"
+          }
+        ],
+        "expect": {
+          "complete": true,
+          "entries": [
+            {
+              "status": "resolved",
+              "version": "1.1.0-beta.1",
+              "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000005"
+            }
+          ]
+        }
+      },
+      {
+        "name": "invalid-range-caret-caret",
+        "domain": "production",
+        "allowCandidates": false,
+        "subject": {
+          "registry": "tiny-agents",
+          "id": "example.subject",
+          "version": "1.0.0",
+          "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000abc"
+        },
+        "indexes": [
+          {
+            "apiVersion": "registry.zeptly.dev/v1alpha1",
+            "kind": "RegistryIndex",
+            "registry": "skills",
+            "digestAlgorithm": "zeptly-jcs-v1",
+            "domain": "production",
+            "entries": [
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "1.0.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/1.0.0",
+                "domain": "production"
+              },
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "1.2.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/1.2.0",
+                "domain": "production"
+              },
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "2.0.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000003",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/2.0.0",
+                "domain": "production"
+              }
+            ]
+          }
+        ],
+        "refs": [
+          {
+            "registry": "skills",
+            "id": "source-evaluation",
+            "version": "^^1"
+          }
+        ],
+        "expect": {
+          "complete": false,
+          "entries": [
+            {
+              "status": "unresolved",
+              "code": "invalid-range"
+            }
+          ]
+        }
+      },
+      {
+        "name": "invalid-range-empty-comparator",
+        "domain": "production",
+        "allowCandidates": false,
+        "subject": {
+          "registry": "tiny-agents",
+          "id": "example.subject",
+          "version": "1.0.0",
+          "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000abc"
+        },
+        "indexes": [
+          {
+            "apiVersion": "registry.zeptly.dev/v1alpha1",
+            "kind": "RegistryIndex",
+            "registry": "skills",
+            "digestAlgorithm": "zeptly-jcs-v1",
+            "domain": "production",
+            "entries": [
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "1.0.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/1.0.0",
+                "domain": "production"
+              },
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "1.2.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/1.2.0",
+                "domain": "production"
+              },
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "2.0.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000003",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/2.0.0",
+                "domain": "production"
+              }
+            ]
+          }
+        ],
+        "refs": [
+          {
+            "registry": "skills",
+            "id": "source-evaluation",
+            "version": ">="
+          }
+        ],
+        "expect": {
+          "complete": false,
+          "entries": [
+            {
+              "status": "unresolved",
+              "code": "invalid-range"
+            }
+          ]
+        }
+      },
+      {
+        "name": "invalid-range-not-a-range",
+        "domain": "production",
+        "allowCandidates": false,
+        "subject": {
+          "registry": "tiny-agents",
+          "id": "example.subject",
+          "version": "1.0.0",
+          "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000abc"
+        },
+        "indexes": [
+          {
+            "apiVersion": "registry.zeptly.dev/v1alpha1",
+            "kind": "RegistryIndex",
+            "registry": "skills",
+            "digestAlgorithm": "zeptly-jcs-v1",
+            "domain": "production",
+            "entries": [
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "1.0.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/1.0.0",
+                "domain": "production"
+              },
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "1.2.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/1.2.0",
+                "domain": "production"
+              },
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "2.0.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000003",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/2.0.0",
+                "domain": "production"
+              }
+            ]
+          }
+        ],
+        "refs": [
+          {
+            "registry": "skills",
+            "id": "source-evaluation",
+            "version": "latest"
+          }
+        ],
+        "expect": {
+          "complete": false,
+          "entries": [
+            {
+              "status": "unresolved",
+              "code": "invalid-range"
+            }
+          ]
+        }
+      },
+      {
+        "name": "invalid-range-bad-or",
+        "domain": "production",
+        "allowCandidates": false,
+        "subject": {
+          "registry": "tiny-agents",
+          "id": "example.subject",
+          "version": "1.0.0",
+          "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000abc"
+        },
+        "indexes": [
+          {
+            "apiVersion": "registry.zeptly.dev/v1alpha1",
+            "kind": "RegistryIndex",
+            "registry": "skills",
+            "digestAlgorithm": "zeptly-jcs-v1",
+            "domain": "production",
+            "entries": [
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "1.0.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/1.0.0",
+                "domain": "production"
+              },
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "1.2.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/1.2.0",
+                "domain": "production"
+              },
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "2.0.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000003",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/2.0.0",
+                "domain": "production"
+              }
+            ]
+          }
+        ],
+        "refs": [
+          {
+            "registry": "skills",
+            "id": "source-evaluation",
+            "version": "^1.0.0 ||"
+          }
+        ],
+        "expect": {
+          "complete": false,
+          "entries": [
+            {
+              "status": "unresolved",
+              "code": "invalid-range"
+            }
+          ]
+        }
+      },
+      {
+        "name": "digest-pin-matches",
+        "domain": "production",
+        "allowCandidates": false,
+        "subject": {
+          "registry": "tiny-agents",
+          "id": "example.subject",
+          "version": "1.0.0",
+          "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000abc"
+        },
+        "indexes": [
+          {
+            "apiVersion": "registry.zeptly.dev/v1alpha1",
+            "kind": "RegistryIndex",
+            "registry": "skills",
+            "digestAlgorithm": "zeptly-jcs-v1",
+            "domain": "production",
+            "entries": [
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "1.0.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/1.0.0",
+                "domain": "production"
+              },
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "1.2.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/1.2.0",
+                "domain": "production"
+              },
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "2.0.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000003",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/2.0.0",
+                "domain": "production"
+              }
+            ]
+          }
+        ],
+        "refs": [
+          {
+            "registry": "skills",
+            "id": "source-evaluation",
+            "version": "^1.0.0",
+            "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
+            "digestAlgorithm": "zeptly-jcs-v1"
+          }
+        ],
+        "expect": {
+          "complete": true,
+          "entries": [
+            {
+              "status": "resolved",
+              "version": "1.2.0",
+              "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000002"
+            }
+          ]
+        }
+      },
+      {
+        "name": "digest-pin-mismatch",
+        "domain": "production",
+        "allowCandidates": false,
+        "subject": {
+          "registry": "tiny-agents",
+          "id": "example.subject",
+          "version": "1.0.0",
+          "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000abc"
+        },
+        "indexes": [
+          {
+            "apiVersion": "registry.zeptly.dev/v1alpha1",
+            "kind": "RegistryIndex",
+            "registry": "skills",
+            "digestAlgorithm": "zeptly-jcs-v1",
+            "domain": "production",
+            "entries": [
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "1.0.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/1.0.0",
+                "domain": "production"
+              },
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "1.2.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/1.2.0",
+                "domain": "production"
+              },
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "2.0.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000003",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/2.0.0",
+                "domain": "production"
+              }
+            ]
+          }
+        ],
+        "refs": [
+          {
+            "registry": "skills",
+            "id": "source-evaluation",
+            "version": "^1.0.0",
+            "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
+            "digestAlgorithm": "zeptly-jcs-v1"
+          }
+        ],
+        "expect": {
+          "complete": false,
+          "entries": [
+            {
+              "status": "unresolved",
+              "code": "digest-mismatch"
+            }
+          ]
+        }
+      },
+      {
+        "name": "every-declared-reference-appears",
+        "domain": "production",
+        "allowCandidates": false,
+        "subject": {
+          "registry": "tiny-agents",
+          "id": "example.subject",
+          "version": "1.0.0",
+          "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000abc"
+        },
+        "indexes": [
+          {
+            "apiVersion": "registry.zeptly.dev/v1alpha1",
+            "kind": "RegistryIndex",
+            "registry": "skills",
+            "digestAlgorithm": "zeptly-jcs-v1",
+            "domain": "production",
+            "entries": [
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "1.0.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/1.0.0",
+                "domain": "production"
+              },
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "1.2.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/1.2.0",
+                "domain": "production"
+              },
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "2.0.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000003",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/2.0.0",
+                "domain": "production"
+              }
+            ]
+          }
+        ],
+        "refs": [
+          {
+            "registry": "skills",
+            "id": "source-evaluation",
+            "version": "^1.0.0"
+          },
+          {
+            "registry": "skills",
+            "id": "missing.skill",
+            "version": "^1.0.0"
+          },
+          {
+            "registry": "models",
+            "id": "gpt.like",
+            "version": "^1.0.0"
+          }
+        ],
+        "expect": {
+          "complete": false,
+          "entries": [
+            {
+              "status": "resolved",
+              "version": "1.2.0",
+              "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000002"
+            },
+            {
+              "status": "unresolved",
+              "code": "not-found"
+            },
+            {
+              "status": "unresolved",
+              "code": "no-peer-index"
+            }
+          ]
+        }
+      },
+      {
+        "name": "no-references-is-complete",
+        "domain": "production",
+        "allowCandidates": false,
+        "subject": {
+          "registry": "tiny-agents",
+          "id": "example.subject",
+          "version": "1.0.0",
+          "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000abc"
+        },
+        "indexes": [
+          {
+            "apiVersion": "registry.zeptly.dev/v1alpha1",
+            "kind": "RegistryIndex",
+            "registry": "skills",
+            "digestAlgorithm": "zeptly-jcs-v1",
+            "domain": "production",
+            "entries": [
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "1.0.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/1.0.0",
+                "domain": "production"
+              },
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "1.2.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/1.2.0",
+                "domain": "production"
+              },
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "2.0.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000003",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/2.0.0",
+                "domain": "production"
+              }
+            ]
+          }
+        ],
+        "refs": [],
+        "expect": {
+          "complete": true,
+          "entries": []
+        }
+      },
+      {
+        "name": "synthetic-domain-resolves-synthetic-index",
+        "domain": "synthetic",
+        "allowCandidates": false,
+        "subject": {
+          "registry": "tiny-agents",
+          "id": "example.subject",
+          "version": "1.0.0",
+          "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000abc"
+        },
+        "indexes": [
+          {
+            "apiVersion": "registry.zeptly.dev/v1alpha1",
+            "kind": "RegistryIndex",
+            "registry": "skills",
+            "digestAlgorithm": "zeptly-jcs-v1",
+            "domain": "synthetic",
+            "entries": [
+              {
+                "registry": "skills",
+                "id": "synthetic.summarise-text",
+                "version": "1.2.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000006",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/synthetic.summarise-text/1.2.0",
+                "domain": "synthetic"
+              }
+            ]
+          }
+        ],
+        "refs": [
+          {
+            "registry": "skills",
+            "id": "synthetic.summarise-text",
+            "version": "^1.0.0"
+          }
+        ],
+        "expect": {
+          "complete": true,
+          "entries": [
+            {
+              "status": "resolved",
+              "version": "1.2.0",
+              "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000006"
+            }
+          ]
+        }
+      },
+      {
+        "name": "production-cannot-consume-synthetic-index",
+        "domain": "production",
+        "allowCandidates": false,
+        "subject": {
+          "registry": "tiny-agents",
+          "id": "example.subject",
+          "version": "1.0.0",
+          "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000abc"
+        },
+        "indexes": [
+          {
+            "apiVersion": "registry.zeptly.dev/v1alpha1",
+            "kind": "RegistryIndex",
+            "registry": "skills",
+            "digestAlgorithm": "zeptly-jcs-v1",
+            "domain": "synthetic",
+            "entries": [
+              {
+                "registry": "skills",
+                "id": "synthetic.summarise-text",
+                "version": "1.2.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000006",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/synthetic.summarise-text/1.2.0",
+                "domain": "synthetic"
+              }
+            ]
+          }
+        ],
+        "refs": [
+          {
+            "registry": "skills",
+            "id": "synthetic.summarise-text",
+            "version": "^1.0.0"
+          }
+        ],
+        "expect": {
+          "error": "domain-mismatch"
+        }
+      },
+      {
+        "name": "synthetic-cannot-consume-production-index",
+        "domain": "synthetic",
+        "allowCandidates": false,
+        "subject": {
+          "registry": "tiny-agents",
+          "id": "example.subject",
+          "version": "1.0.0",
+          "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000abc"
+        },
+        "indexes": [
+          {
+            "apiVersion": "registry.zeptly.dev/v1alpha1",
+            "kind": "RegistryIndex",
+            "registry": "skills",
+            "digestAlgorithm": "zeptly-jcs-v1",
+            "domain": "production",
+            "entries": [
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "1.0.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/1.0.0",
+                "domain": "production"
+              },
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "1.2.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/1.2.0",
+                "domain": "production"
+              },
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "2.0.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000003",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/2.0.0",
+                "domain": "production"
+              }
+            ]
+          }
+        ],
+        "refs": [
+          {
+            "registry": "skills",
+            "id": "source-evaluation",
+            "version": "^1.0.0"
+          }
+        ],
+        "expect": {
+          "error": "domain-mismatch"
+        }
+      },
+      {
+        "name": "mixed-domain-indexes-rejected",
+        "domain": "production",
+        "allowCandidates": false,
+        "subject": {
+          "registry": "tiny-agents",
+          "id": "example.subject",
+          "version": "1.0.0",
+          "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000abc"
+        },
+        "indexes": [
+          {
+            "apiVersion": "registry.zeptly.dev/v1alpha1",
+            "kind": "RegistryIndex",
+            "registry": "skills",
+            "digestAlgorithm": "zeptly-jcs-v1",
+            "domain": "production",
+            "entries": [
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "1.0.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/1.0.0",
+                "domain": "production"
+              },
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "1.2.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/1.2.0",
+                "domain": "production"
+              },
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "2.0.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000003",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/2.0.0",
+                "domain": "production"
+              }
+            ]
+          },
+          {
+            "apiVersion": "registry.zeptly.dev/v1alpha1",
+            "kind": "RegistryIndex",
+            "registry": "models",
+            "digestAlgorithm": "zeptly-jcs-v1",
+            "domain": "synthetic",
+            "entries": [
+              {
+                "registry": "skills",
+                "id": "synthetic.summarise-text",
+                "version": "1.2.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000006",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/synthetic.summarise-text/1.2.0",
+                "domain": "synthetic"
+              }
+            ]
+          }
+        ],
+        "refs": [
+          {
+            "registry": "skills",
+            "id": "source-evaluation",
+            "version": "^1.0.0"
+          }
+        ],
+        "expect": {
+          "error": "mixed-domains"
+        }
+      },
+      {
+        "name": "entry-domain-conflicts-with-index",
+        "domain": "production",
+        "allowCandidates": false,
+        "subject": {
+          "registry": "tiny-agents",
+          "id": "example.subject",
+          "version": "1.0.0",
+          "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000abc"
+        },
+        "indexes": [
+          {
+            "apiVersion": "registry.zeptly.dev/v1alpha1",
+            "kind": "RegistryIndex",
+            "registry": "skills",
+            "digestAlgorithm": "zeptly-jcs-v1",
+            "domain": "production",
+            "entries": [
+              {
+                "registry": "skills",
+                "id": "synthetic.leak",
+                "version": "1.0.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000007",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/synthetic.leak/1.0.0",
+                "domain": "synthetic"
+              }
+            ]
+          }
+        ],
+        "refs": [
+          {
+            "registry": "skills",
+            "id": "synthetic.leak",
+            "version": "^1.0.0"
+          }
+        ],
+        "expect": {
+          "error": "conflicting-domain-metadata"
+        }
+      },
+      {
+        "name": "unsupported-digest-algorithm",
+        "domain": "production",
+        "allowCandidates": false,
+        "subject": {
+          "registry": "tiny-agents",
+          "id": "example.subject",
+          "version": "1.0.0",
+          "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000abc"
+        },
+        "indexes": [
+          {
+            "apiVersion": "registry.zeptly.dev/v1alpha1",
+            "kind": "RegistryIndex",
+            "registry": "skills",
+            "digestAlgorithm": "zeptly-jcs-v0",
+            "domain": "production",
+            "entries": [
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "1.0.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/1.0.0",
+                "domain": "production"
+              },
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "1.2.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/1.2.0",
+                "domain": "production"
+              },
+              {
+                "registry": "skills",
+                "id": "source-evaluation",
+                "version": "2.0.0",
+                "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000003",
+                "digestAlgorithm": "zeptly-jcs-v1",
+                "sealDigest": null,
+                "maturity": "canonical",
+                "lifecycle": "active",
+                "origin": {
+                  "type": "native"
+                },
+                "location": "x/source-evaluation/2.0.0",
+                "domain": "production"
+              }
+            ]
+          }
+        ],
+        "refs": [
+          {
+            "registry": "skills",
+            "id": "source-evaluation",
+            "version": "^1.0.0"
+          }
+        ],
+        "expect": {
+          "error": "unsupported-digest-algorithm"
+        }
+      }
+    ],
+    "fullLock": {
+      "name": "exact-lock-shape",
+      "domain": "production",
+      "allowCandidates": false,
+      "subject": {
+        "registry": "tiny-agents",
+        "id": "example.subject",
+        "version": "1.0.0",
+        "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000abc"
+      },
+      "indexes": [
+        {
+          "apiVersion": "registry.zeptly.dev/v1alpha1",
+          "kind": "RegistryIndex",
+          "registry": "skills",
+          "digestAlgorithm": "zeptly-jcs-v1",
+          "domain": "production",
+          "entries": [
+            {
+              "registry": "skills",
+              "id": "source-evaluation",
+              "version": "1.0.0",
+              "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
+              "digestAlgorithm": "zeptly-jcs-v1",
+              "sealDigest": null,
+              "maturity": "canonical",
+              "lifecycle": "active",
+              "origin": {
+                "type": "native"
+              },
+              "location": "x/source-evaluation/1.0.0",
+              "domain": "production"
+            },
+            {
+              "registry": "skills",
+              "id": "source-evaluation",
+              "version": "1.2.0",
+              "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
+              "digestAlgorithm": "zeptly-jcs-v1",
+              "sealDigest": null,
+              "maturity": "canonical",
+              "lifecycle": "active",
+              "origin": {
+                "type": "native"
+              },
+              "location": "x/source-evaluation/1.2.0",
+              "domain": "production"
+            },
+            {
+              "registry": "skills",
+              "id": "source-evaluation",
+              "version": "2.0.0",
+              "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000003",
+              "digestAlgorithm": "zeptly-jcs-v1",
+              "sealDigest": null,
+              "maturity": "canonical",
+              "lifecycle": "active",
+              "origin": {
+                "type": "native"
+              },
+              "location": "x/source-evaluation/2.0.0",
+              "domain": "production"
+            }
+          ]
+        }
+      ],
+      "refs": [
+        {
+          "registry": "skills",
+          "id": "source-evaluation",
+          "version": "^1.0.0",
+          "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
+          "digestAlgorithm": "zeptly-jcs-v1"
+        },
+        {
+          "registry": "models",
+          "id": "gpt.like",
+          "version": "^1.0.0"
+        }
+      ],
+      "lock": {
+        "apiVersion": "registry.zeptly.dev/v1alpha1",
+        "kind": "RuntimeLock",
+        "digestAlgorithm": "zeptly-jcs-v1",
+        "domain": "production",
+        "subject": {
+          "registry": "tiny-agents",
+          "id": "example.subject",
+          "version": "1.0.0",
+          "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000abc"
+        },
+        "complete": false,
+        "entries": [
+          {
+            "requested": {
+              "registry": "skills",
+              "id": "source-evaluation",
+              "version": "^1.0.0",
+              "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
+              "digestAlgorithm": "zeptly-jcs-v1"
+            },
+            "status": "resolved",
+            "resolved": {
+              "registry": "skills",
+              "id": "source-evaluation",
+              "version": "1.2.0",
+              "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
+              "digestAlgorithm": "zeptly-jcs-v1",
+              "sealDigest": null,
+              "maturity": "canonical"
+            }
+          },
+          {
+            "requested": {
+              "registry": "models",
+              "id": "gpt.like",
+              "version": "^1.0.0"
+            },
+            "status": "unresolved",
+            "unresolved": {
+              "code": "no-peer-index",
+              "message": "no index for registry 'models' was provided; resolution deferred"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

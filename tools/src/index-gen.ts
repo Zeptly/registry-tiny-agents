@@ -3,13 +3,16 @@ import { existsSync, readFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { compareSemver } from "./semver.js";
 import { compareCodePoints, sortCodePoints } from "./order.js";
 import { FILES } from "./layout.js";
+import { DIGEST_ALGORITHM } from "./integrity.js";
 import { REGISTRY_NAME } from "./ids.js";
 import { schemaErrors } from "./load.js";
 import { validateRoot, type LoadedVersion } from "./validate.js";
 
 /**
  * Deterministic derived data: no timestamps, fixed key order, sorted entries.
- * Carries identity, version, digest, maturity, lifecycle, origin and artifact location (Registry Protocol v0.1).
+ * Protocol v0.2 §8: registry, id, version, artifact digest, directory seal, maturity, effective lifecycle, origin, location,
+ * digest algorithm and domain. Entries sort by code-point id, then SemVer precedence, then digest (index order is separate
+ * from JCS key ordering).
  */
 export function buildIndex(rootArg: string): { text: string; errors: number } {
   const v = validateRoot(rootArg);
@@ -19,24 +22,26 @@ export function buildIndex(rootArg: string): { text: string; errors: number } {
     id: x.id,
     version: x.version,
     digest: x.digest,
+    digestAlgorithm: DIGEST_ALGORITHM,
     sealDigest: x.sealDigest ?? null,
     maturity: x.maturity,
     lifecycle: x.lifecycle,
     origin: { type: x.blueprint.metadata.origin.type, ...(x.blueprint.metadata.origin.evolution ? { evolution: { kind: x.blueprint.metadata.origin.evolution.kind } } : {}) },
     location: x.location,
-    synthetic: x.blueprint.metadata.synthetic,
+    domain: v.domain as "production" | "synthetic",
     name: x.blueprint.spec.descriptor.name,
     taskClass: x.blueprint.spec.descriptor.taskClass,
     summary: x.blueprint.spec.intent.summary,
     capabilities: sortCodePoints(x.blueprint.security.capabilities.map((c: { capability: string }) => c.capability)),
     references: x.blueprint.references,
   });
-  const sorted = [...v.versions].sort((a, b) => compareCodePoints(a.id, b.id) || compareSemver(a.version, b.version) || compareCodePoints(a.maturity, b.maturity));
+  const sorted = [...v.versions].sort((a, b) => compareCodePoints(a.id, b.id) || compareSemver(a.version, b.version) || compareCodePoints(a.digest, b.digest));
   const doc = {
     apiVersion: "registry.zeptly.dev/v1alpha1",
     kind: "RegistryIndex",
     registry: REGISTRY_NAME,
-    purpose: v.purpose,
+    digestAlgorithm: DIGEST_ALGORITHM,
+    domain: v.domain,
     entries: sorted.map(entry),
   };
   const bad = schemaErrors("index", doc);

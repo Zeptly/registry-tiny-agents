@@ -33,7 +33,7 @@
         "maturity",
         "synthetic"
       ],
-      "description": "Protocol v0.1 metadata. `lifecycle` is intentionally NOT stored here: it is an append-only overlay (lifecycle.yaml) so immutable content cannot go stale.",
+      "description": "Protocol v0.2 metadata. `lifecycle` is intentionally NOT stored here: it is an append-only overlay (lifecycle.yaml) so immutable content cannot go stale (documented deviation from the v0.2 envelope sketch).",
       "properties": {
         "id": {
           "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryId"
@@ -55,8 +55,11 @@
               "enum": [
                 "native",
                 "upstream-seed",
+                "discovered",
+                "refined",
                 "evolved"
-              ]
+              ],
+              "description": "Shared Protocol v0.2 vocabulary. This registry accepts only native, upstream-seed and evolved (validator rule): discovered/refined/generalised are evolution kinds here, not origin types."
             },
             "evolution": {
               "type": "object",
@@ -69,8 +72,10 @@
                 "kind": {
                   "enum": [
                     "discovered",
-                    "refined"
-                  ]
+                    "refined",
+                    "generalised"
+                  ],
+                  "description": "Sole location of the evolution kind. This registry accepts only discovered and refined (validator rule)."
                 },
                 "sourceRefs": {
                   "type": "array",
@@ -1101,7 +1106,7 @@
       }
     },
     "attestation": {
-      "description": "Digest-bound attestation. `subjectDigest` is the content digest of the artifact it assessed. Types sanitisation/evaluation reference an in-directory document (file:<path>); others use external evidence pointers (evidence://\u2026, full Evidence Protocol deferred).",
+      "description": "Digest-bound attestation. `subjectDigest` is the artifact digest it assessed. sanitisation/security-review/recurrence use {type, ref, subjectDigest, outcome}. evaluation uses {type, suite{id,version,digest}, result, subjectDigest, ref} where ref is the in-directory result document (file:<path>).",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -1130,8 +1135,76 @@
             "pass",
             "fail"
           ]
+        },
+        "suite": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "version",
+            "digest"
+          ],
+          "properties": {
+            "id": {
+              "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryId"
+            },
+            "version": {
+              "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/semver"
+            },
+            "digest": {
+              "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digest"
+            }
+          }
+        },
+        "result": {
+          "enum": [
+            "pass",
+            "fail",
+            "inconclusive"
+          ]
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "evaluation"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "required": [
+              "suite",
+              "result"
+            ],
+            "not": {
+              "required": [
+                "outcome"
+              ]
+            }
+          },
+          "else": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "suite"
+                  ]
+                },
+                {
+                  "required": [
+                    "result"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ]
     }
   }
 }

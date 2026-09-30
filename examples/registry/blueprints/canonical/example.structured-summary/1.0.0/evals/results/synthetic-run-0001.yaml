@@ -3,7 +3,7 @@ synthetic: true
 subject:
   id: example.structured-summary
 subjectDigest: sha256:7c953f60067a549e67b8a454971638cc26abe0d9ab17f7176a7ee5ba59eb78ea
-suiteDigest: sha256:934df0e4087d8a50d811f720ab26f1f19b80686c03e445e3abb058eb02100ba0
+suiteDigest: sha256:190208c80f869c3354388729b5b0164275cf3f66abda38015f5f8b21a30a387f
 runner: SYNTHETIC fabricated result - not a real evaluation run
 summary:
   cases: 3

@@ -14,7 +14,7 @@ confirmation.
 | 6 | Evidence-reference protocol | **Deferred** by protocol; attestations carry opaque pointers only |
 | 7 | Index format/publication | **Fields settled**; peer-index distribution/publication deferred |
 | 8 | Provenance schema | **Envelope settled** (`createdAt/authors/sourceRefs/transformations`); item shapes registry-local |
-| 9 | Digest/sealing convention | **Normalized**: artifact digest (excludes version, maturity, lifecycle, attestations, governance approvals) plus a separate directory seal; canonical JSON, code-point ordering, LF policy and golden vectors in [CANONICALIZATION.md](CANONICALIZATION.md) |
+| 9 | Digest/sealing convention | **Normalized**: artifact digest (excludes version, maturity, lifecycle, attestations, governance approvals) plus a separate directory seal; **v0.2 adopted on this draft (`zeptly-jcs-v1`)**: RFC 8785 JCS, JSON-compatible YAML subset, artifact digest projection, directory seal over payload files, language-neutral vectors — see [CANONICALIZATION.md](CANONICALIZATION.md) and [PROTOCOL-V0_2.md](PROTOCOL-V0_2.md) |
 | 10 | SemVer change classification | **Open**: SemVer required; MAJOR/MINOR/PATCH classification remains local (docs/LIFECYCLE.md) |
 | 11 | Shared capability/tool/gateway namespaces | **Deferred** by protocol |
 | 12 | Shared evaluation-result format | **Open**: attestation type `evaluation` settled; result document format registry-local |

@@ -1,4 +1,4 @@
 registryRootVersion: registry-root/v1alpha1
 registry: tiny-agents
-purpose: example
+domain: synthetic
 description: SYNTHETIC example registry root used to prove the architecture and to drive tests. Nothing here is a real Zeptly blueprint, evidence, evaluation or provenance record.

@@ -109,7 +109,7 @@ spec:
         reason: Security posture may never be altered by the compiler.
   skills:
     - key: summarise
-      ref: &a1
+      ref:
         registry: skills
         id: synthetic.summarise-text
         version: ^1.0.0
@@ -157,7 +157,9 @@ spec:
     gates:
       minPassRate: 0.9
 references:
-  - *a1
+  - registry: skills
+    id: synthetic.summarise-text
+    version: ^1.0.0
 provenance:
   createdAt: 2026-01-01T00:00:00Z
   authors:
@@ -181,8 +183,12 @@ attestations:
     outcome: pass
   - type: evaluation
     ref: file:evals/results/synthetic-run-0001.yaml
+    suite:
+      id: example.structured-summary-suite
+      version: 1.0.0
+      digest: sha256:190208c80f869c3354388729b5b0164275cf3f66abda38015f5f8b21a30a387f
+    result: pass
     subjectDigest: sha256:7c953f60067a549e67b8a454971638cc26abe0d9ab17f7176a7ee5ba59eb78ea
-    outcome: pass
   - type: security-review
     ref: evidence://synthetic/security-review/0001
     subjectDigest: sha256:7c953f60067a549e67b8a454971638cc26abe0d9ab17f7176a7ee5ba59eb78ea

@@ -2,30 +2,27 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:zeptly:tiny-agents:schema:registry-root",
   "title": "Registry root marker (registry-local format)",
-  "description": "purpose=production forbids synthetic content and placeholder identities; purpose=example REQUIRES every object to be marked synthetic.",
+  "description": "domain=production forbids synthetic content and placeholder identities; domain=synthetic REQUIRES every object to be marked synthetic.",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "registryRootVersion",
     "registry",
-    "purpose",
+    "domain",
     "description"
   ],
   "properties": {
     "registryRootVersion": {
       "const": "registry-root/v1alpha1"
     },
-    "purpose": {
-      "enum": [
-        "production",
-        "example"
-      ]
-    },
     "description": {
       "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText"
     },
     "registry": {
       "const": "tiny-agents"
+    },
+    "domain": {
+      "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/domain"
     }
   }
 }

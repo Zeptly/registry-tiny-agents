@@ -34,7 +34,11 @@ attestations: []       # digest-bound
 | Compiler/runtime must not alter security classification | `adaptation.locked` must include `security`; `security` is never `mayAlter` | `validate` |
 | Deterministic index with identity, version, digest, maturity, lifecycle, origin, location | `index/registry-index.json`, no timestamps | `index --check` in CI |
 | Promotion: schema, semantics, evals, provenance, security review, digest-bound attestations, approval | `policy/registry-policy.yaml` per provenance class; `promotion.yaml` | `validate` |
-| Synthetic examples isolated and marked | `examples/registry/` root (`purpose: example`); `example.` id namespace; `synthetic: true`; `evidence://synthetic/…` | `validate`; production index schema forbids synthetic entries |
+| Synthetic examples isolated and marked | `examples/registry/` root (`domain: synthetic`); `example.` id namespace; `synthetic: true`; `evidence://synthetic/…` | `validate`; production index schema forbids synthetic entries |
+
+> **Protocol v0.2 is adopted on this draft branch** (`zeptly-jcs-v1`): see [PROTOCOL-V0_2.md](PROTOCOL-V0_2.md). Where this
+> file describes the v0.1 digest (code-point key order, directory seal over all files) it is superseded by
+> [CANONICALIZATION.md](CANONICALIZATION.md).
 
 ## Shared normalizations
 
@@ -43,11 +47,11 @@ attestations: []       # digest-bound
 * **ID grammar**: lowercase ASCII letters/digits in segments separated by single `.` or `-`
   (`^[a-z0-9]+([.-][a-z0-9]+)*$`, 3–128 characters), no registry-specific prefix. The `example.` prefix is the
   reserved synthetic namespace, not an ID convention for production.
-* **Runtime lock** (`schema/runtime-lock.schema.json`): `subject` plus one ordered `entries[]` item per declared
-  reference, each `status: resolved | unresolved`. Unresolved items carry a code (`no-peer-index`, `not-found`,
-  `no-eligible-version`, `digest-mismatch`, and the registry-local `invalid-range`); foreign references are never
-  omitted. Resolution is domain-isolated (production by default; example only explicitly) — see
-  [RUNTIME-CONTRACT.md](RUNTIME-CONTRACT.md).
+* **Runtime lock** (`schema/runtime-lock.schema.json`, v0.2 `RuntimeLock`): `digestAlgorithm`, `domain`, `subject`,
+  `complete`, and one ordered `entries[]` item per declared reference, each `status: resolved | unresolved`. Unresolved
+  items carry a code (`no-peer-index`, `not-found`, `no-eligible-version`, `digest-mismatch`, and the registry-local
+  `invalid-range`); foreign references are never omitted. Resolution is domain-isolated (production by default;
+  synthetic only explicitly) — see [RUNTIME-CONTRACT.md](RUNTIME-CONTRACT.md).
 * **Content safety**: explicit filename allow-list (`policy files.allow`), per-file / per-directory / file-count limits,
   symbolic links and special files rejected and never followed, LF-only UTF-8, and tape/trace/transcript detection
   (forbidden keys, contextual conversation-turn structures, transcript text and opaque-blob patterns); invalid
@@ -59,18 +63,16 @@ attestations: []       # digest-bound
 the index `location`. `tools/src/layout.ts` derives where artifacts are *created* (`idSegment` encodes any id safely for
 the filesystem) and `validate` lints that artifacts sit there. Changing the layout means editing `layout.ts` only.
 
-## Digests
+## Digests (`zeptly-jcs-v1`)
 
-* **Artifact `digest`** (index, references, locks) = SHA-256 of the canonical JSON of the blueprint. **Included:**
-  identity, `spec`, `references`, `provenance`, `security.classification` and `security.capabilities`. **Excluded:**
+* **Artifact `digest`** (index, references, locks) = `sha256(JCS(projection))`. **Included:** identity, origin,
+  `spec`, `references`, `provenance`, `security.classification` and `security.capabilities`. **Excluded:**
   `metadata.version`, `metadata.maturity`, lifecycle (overlay file), `attestations` and `security.approvals`
-  (governance approvals). Attestations cannot contain the digest of a document that contains them, and promotion must
-  not invalidate evaluations of unchanged content.
-* **`sealDigest`** (canonical only) = separate SHA-256 over the canonical payload files (every file in the version
-  directory except `lifecycle.yaml` and `integrity.json`): tamper-evidence, checked by `validate` and the Git
-  immutability check.
-* Canonical JSON, code-point ordering and the LF-only line-ending policy are specified in
-  [CANONICALIZATION.md](CANONICALIZATION.md) and pinned by golden vectors.
+  (governance approvals). Runtime approval requirements stay in `spec.capabilities[].approval` and are covered.
+* **`sealDigest`** (canonical only) = `sha256(JCS({registry, id, version, payload[]}))` over the permitted payload files
+  (policy `files.payload`).
+* RFC 8785 JCS, the JSON-compatible YAML subset and the LF-only policy are specified in
+  [CANONICALIZATION.md](CANONICALIZATION.md) and pinned by language-neutral vectors (`vectors/`).
 * Attestation documents (sanitisation report, evaluation result, promotion record, submission) carry `subjectDigest`
   and are rejected when stale.
 

@@ -124,9 +124,10 @@ test("invalid YAML produces a file/line diagnostic, never an exception, and the 
   const r = brokenRoot(`${B}/evals/suite.yaml`, "a: [unclosed\n");
   let v!: ReturnType<typeof validateRoot>;
   assert.doesNotThrow(() => { v = validateRoot(r); });
-  const d = v.diagnostics.find((x) => x.where.endsWith("evals/suite.yaml") && x.message.startsWith("cannot parse YAML"));
+  const d = v.diagnostics.find((x) => x.where.endsWith("evals/suite.yaml") && x.code === "syntax-error");
   assert.ok(d, JSON.stringify(v.diagnostics.slice(0, 3)));
   assert.match(d!.message, /line \d+, column \d+/);
+  assert.ok(typeof d!.line === "number" && typeof d!.column === "number", "diagnostic carries file, line/column and a machine-readable code");
   assert.equal(v.diagnostics.filter((x) => x.where.endsWith("evals/suite.yaml") && x.severity === "error").length, 1, "reported exactly once");
 });
 
@@ -137,7 +138,7 @@ test("duplicate YAML keys and invalid blueprint syntax are diagnostics, and noth
   writeFileSync(p, readFileSync(p, "utf8").replace("kind: TinyAgentBlueprint", "kind: TinyAgentBlueprint\nkind: TinyAgentBlueprint"));
   let v!: ReturnType<typeof validateRoot>;
   assert.doesNotThrow(() => { v = validateRoot(r); });
-  assert.ok(v.diagnostics.some((x) => x.where.endsWith(`${B}/blueprint.yaml`) && /Map keys must be unique/.test(x.message)));
+  assert.ok(v.diagnostics.some((x) => x.where.endsWith(`${B}/blueprint.yaml`) && x.code === "duplicate-key" && x.path === "kind"));
   assert.ok(!v.versions.some((x) => x.id === "example.request-triage"), "invalid document must not be loaded (so it is never hashed)");
   assert.ok(buildIndex(r).errors > 0);
   assert.equal(writeIndex(r, true).ok, false);
@@ -165,11 +166,11 @@ test("parse failures in unreferenced, sealed and JSON files are also controlled"
   const extra = tempRoot();
   mkdirSync(join(extra, B, "evals", "results"), { recursive: true });
   writeFileSync(join(extra, B, "evals", "results", "extra.yaml"), "a: 1\na: 2\n");
-  assert.ok(validateRoot(extra).diagnostics.some((x) => x.where.endsWith("evals/results/extra.yaml") && /Map keys must be unique/.test(x.message)));
+  assert.ok(validateRoot(extra).diagnostics.some((x) => x.where.endsWith("evals/results/extra.yaml") && x.code === "duplicate-key" && x.path === "a"));
   const sealed = brokenRoot(`${A}/integrity.json`, '{"digest": ');
   let v!: ReturnType<typeof validateRoot>;
   assert.doesNotThrow(() => { v = validateRoot(sealed); });
-  assert.ok(v.diagnostics.some((x) => x.where.endsWith("integrity.json") && x.message.startsWith("cannot parse JSON")));
+  assert.ok(v.diagnostics.some((x) => x.where.endsWith("integrity.json") && x.code === "invalid-json"));
   assert.ok(v.diagnostics.some((x) => /canonical versions must be sealed/.test(x.message)), "an unreadable seal is never treated as valid");
   const policyless = new Scanner(readYaml(DEFAULT_POLICY).privacy).scanFile(join(extra, B, "evals", "results", "extra.yaml"));
   assert.equal(policyless[0]?.detector, "parse-error");
@@ -178,8 +179,8 @@ test("parse failures in unreferenced, sealed and JSON files are also controlled"
 test("CLI: broken YAML yields diagnostics on stdout, exit 1, and no stack trace", () => {
   const r = brokenRoot(`${B}/evals/suite.yaml`, "a: [unclosed\n");
   const res = run("validate", r);
-  assert.equal(res.status, 1);
-  assert.match(res.stdout, /cannot parse YAML/);
+  assert.equal(res.status, 2); // malformed input / validation error
+  assert.match(res.stdout, /\[syntax-error\]/);
   assert.match(res.stdout, /evals\/suite\.yaml/);
   assert.doesNotMatch(res.stderr, /\n\s+at /);
   assert.doesNotMatch(res.stdout, /\b0 error\(s\)/);
@@ -188,7 +189,7 @@ test("CLI: broken YAML yields diagnostics on stdout, exit 1, and no stack trace"
 test("CLI: unexpected input errors are reported as 'error:' with exit 2, not a stack trace", () => {
   const res = run("lock", join(tmp(), "nonexistent-root"), "--id", "x.y", "--range", "^1.0.0");
   assert.equal(res.status, 2);
-  assert.match(res.stderr, /^error: /);
+  assert.match(res.stderr, /cannot read file/);
   assert.doesNotMatch(res.stderr, /\n\s+at /);
 });
 
@@ -200,10 +201,18 @@ const withNumber = (literal: string) => { const d = tmp(); const f = join(d, "x.
 
 test("source-level: integer literals and exponent forms that would round silently are rejected", () => {
   for (const lit of ["12345678901234567890", "-12345678901234567890", "9007199254740992", "9007199254740993", "-9007199254740993", "9007199254740993.0",
-    "9.007199254740993e15", "90071992547409930e-1", "9007199254740993e0", "1e21", "1E21", "1e300", "0x20000000000001", "0o400000000000000001", "9007199254740992.5"]) {
+    "9.007199254740993e15", "90071992547409930e-1", "9007199254740993e0", "1e21", "1E21", "1e300"]) {
     const r = withNumber(lit);
     assert.equal(r.doc, undefined, `${lit} must be rejected`);
     assert.match(r.problems.join("\n"), /n: integer-valued number outside the safe integer range.*\[unsafe-integer\]/, lit);
+  }
+});
+
+test("source-level: hex, octal, signed and leading-zero spellings are not JSON decimal literals", () => {
+  for (const lit of ["0x20000000000001", "0o400000000000000001", "0x1F", "+1", ".5", "5.", "010"]) {
+    const r = withNumber(lit);
+    assert.equal(r.doc, undefined, `${lit} must be rejected`);
+    assert.match(r.problems.join("\n"), /\[unsupported-number-syntax\]/, lit);
   }
 });
 
@@ -216,7 +225,7 @@ test("source-level: non-finite numbers are rejected before they can become null"
 });
 
 test("source-level: valid numbers keep their behaviour (safe integers, fractions, small exponents)", () => {
-  const ok: [string, number][] = [["0", 0], ["-0", -0], ["42", 42], ["9007199254740991", Number.MAX_SAFE_INTEGER], ["-9007199254740991", -Number.MAX_SAFE_INTEGER], ["1e3", 1000], ["1.5e2", 150], ["0x1F", 31], ["2.5", 2.5], ["0.1", 0.1], ["-0.25", -0.25], ["1e-7", 1e-7], ["1234567.891", 1234567.891], ["9007199254740991.0", Number.MAX_SAFE_INTEGER]];
+  const ok: [string, number][] = [["0", 0], ["-0", -0], ["42", 42], ["9007199254740991", Number.MAX_SAFE_INTEGER], ["-9007199254740991", -Number.MAX_SAFE_INTEGER], ["1e3", 1000], ["1.5e2", 150], ["2.5", 2.5], ["0.1", 0.1], ["-0.25", -0.25], ["1e-7", 1e-7], ["1234567.891", 1234567.891], ["9007199254740991.0", Number.MAX_SAFE_INTEGER]];
   for (const [lit, want] of ok) { const r = withNumber(lit); assert.deepEqual(r.problems, [], lit); assert.ok(Object.is((r.doc as Doc).n, want), `${lit} -> ${(r.doc as Doc).n}`); }
   assert.equal(canonicalJson({ n: 0.1, m: 2.5, k: 1e-7 }), '{"k":1e-7,"m":2.5,"n":0.1}');
 });
@@ -270,91 +279,96 @@ test("validation of a real blueprint reports the JSON path of an invalid value a
 // 4. Domain isolation during resolution
 // =================================================================================================
 
-const ix = (purpose: string | undefined, entries: Doc[], registry = "tiny-agents"): Doc => ({ apiVersion: "registry.zeptly.dev/v1alpha1", kind: "RegistryIndex", registry, ...(purpose ? { purpose } : {}), entries });
-const ent = (id: string, version: string, synthetic: boolean | undefined, registry = "tiny-agents"): Doc => ({ registry, id, version, digest: "sha256:" + "a".repeat(64), sealDigest: null, maturity: "canonical", lifecycle: "active", origin: { type: "native" }, location: `x/${id}/${version}`, ...(synthetic === undefined ? {} : { synthetic }) });
+const ix = (domain: string | undefined, entries: Doc[], registry = "tiny-agents"): Doc => ({ apiVersion: "registry.zeptly.dev/v1alpha1", kind: "RegistryIndex", registry, digestAlgorithm: "zeptly-jcs-v1", ...(domain ? { domain } : {}), entries });
+const ent = (id: string, version: string, domain: string | undefined, registry = "tiny-agents"): Doc => ({ registry, id, version, digest: "sha256:" + "a".repeat(64), digestAlgorithm: "zeptly-jcs-v1", sealDigest: null, maturity: "canonical", lifecycle: "active", origin: { type: "native" }, location: `x/${id}/${version}`, ...(domain === undefined ? {} : { domain }) });
 const refOf = (id: string, version = "^1.0.0", registry = "tiny-agents") => ({ registry, id, version });
 const domErr = (fn: () => unknown): DomainError => { try { fn(); } catch (e) { assert.ok(e instanceof DomainError, String(e)); return e as DomainError; } throw new Error("expected DomainError"); };
 
-test("domain: valid production resolution and valid example resolution work separately", () => {
-  const prod = ix("production", [ent("real.thing", "1.2.0", false)]);
-  const exa = ix("example", [ent("example.thing", "1.0.0", true)]);
+test("domain: valid production resolution and valid synthetic resolution work separately", () => {
+  const prod = ix("production", [ent("real.thing", "1.2.0", "production")]);
+  const exa = ix("synthetic", [ent("example.thing", "1.0.0", "synthetic")]);
   assert.equal(resolveRef([prod], refOf("real.thing")).resolved?.version, "1.2.0"); // default domain = production
   assert.equal(resolveRef([prod], refOf("real.thing"), { domain: "production" }).resolved?.version, "1.2.0");
-  assert.equal(resolveRef([exa], refOf("example.thing"), { domain: "example" }).resolved?.version, "1.0.0");
-  assert.equal(buildLock([prod], { registry: "tiny-agents", id: "s.s", version: "1.0.0", digest: "sha256:" + "b".repeat(64) }, [refOf("real.thing")]).entries[0].status, "resolved");
+  assert.equal(resolveRef([exa], refOf("example.thing"), { domain: "synthetic" }).resolved?.version, "1.0.0");
+  const lock = buildLock([prod], { registry: "tiny-agents", id: "s.s", version: "1.0.0", digest: "sha256:" + "b".repeat(64) }, [refOf("real.thing")]);
+  assert.equal(lock.entries[0].status, "resolved"); assert.equal(lock.complete, true); assert.equal(lock.domain, "production");
 });
 
-test("domain: production resolution rejects example indexes; example resolution must be explicit", () => {
-  const exa = ix("example", [ent("example.thing", "1.0.0", true)]);
+test("domain: production resolution cannot consume synthetic indexes; synthetic resolution must be explicit", () => {
+  const exa = ix("synthetic", [ent("example.thing", "1.0.0", "synthetic")]);
   const e1 = domErr(() => resolveRef([exa], refOf("example.thing")));
   assert.equal(e1.code, "domain-mismatch");
-  assert.match(e1.message, /index #1 .* declares purpose 'example' but the resolution domain is 'production'.*explicitly/);
+  assert.match(e1.message, /index #1 .* declares domain 'synthetic' but the resolution domain is 'production'.*explicitly/);
   assert.equal(domErr(() => resolveRef([exa], refOf("example.thing"), { domain: "production" })).code, "domain-mismatch");
-  assert.equal(resolveRef([exa], refOf("example.thing"), { domain: "example" }).resolved?.id, "example.thing");
+  assert.equal(domErr(() => buildLock([exa], { registry: "tiny-agents", id: "s.s", version: "1.0.0", digest: "sha256:" + "b".repeat(64) }, [refOf("example.thing")])).code, "domain-mismatch");
+  assert.equal(resolveRef([exa], refOf("example.thing"), { domain: "synthetic" }).resolved?.id, "example.thing");
 });
 
-test("domain: mixed index inputs are rejected in both directions and name the offending index", () => {
-  const prod = ix("production", [ent("real.thing", "1.0.0", false)]);
-  const exa = ix("example", [ent("example.thing", "1.0.0", true)]);
+test("domain: mixed-domain indexes are rejected in both directions and name the offending index", () => {
+  const prod = ix("production", [ent("real.thing", "1.0.0", "production")]);
+  const exa = ix("synthetic", [ent("example.thing", "1.0.0", "synthetic")]);
   const e1 = domErr(() => resolveRef([prod, exa], refOf("real.thing")));
-  assert.equal(e1.code, "domain-mismatch"); assert.match(e1.message, /index #2/);
-  const e2 = domErr(() => resolveRef([exa, prod], refOf("example.thing"), { domain: "example" }));
-  assert.equal(e2.code, "domain-mismatch"); assert.match(e2.message, /index #2 .* declares purpose 'production' but the resolution domain is 'example'/);
-  domErr(() => buildLock([prod, exa], { registry: "tiny-agents", id: "s.s", version: "1.0.0", digest: "sha256:" + "b".repeat(64) }, []));
+  assert.equal(e1.code, "mixed-domains");
+  assert.ok(e1.problems.some((p) => p.code === "domain-mismatch" && /index #2/.test(p.message)));
+  const e2 = domErr(() => resolveRef([exa, prod], refOf("example.thing"), { domain: "synthetic" }));
+  assert.equal(e2.code, "mixed-domains");
+  assert.ok(e2.problems.some((p) => p.code === "domain-mismatch" && /index #2 .* declares domain 'production' but the resolution domain is 'synthetic'/.test(p.message)));
+  assert.equal(domErr(() => buildLock([prod, exa], { registry: "tiny-agents", id: "s.s", version: "1.0.0", digest: "sha256:" + "b".repeat(64) }, [])).code, "mixed-domains");
 });
 
-test("domain: synthetic targets and conflicting metadata fail clearly (metadata, not ID prefix)", () => {
-  // synthetic target inside a production-purpose index
-  const e1 = domErr(() => resolveRef([ix("production", [ent("real.thing", "1.0.0", false), ent("leaked.synthetic", "1.0.0", true)])], refOf("real.thing")));
+test("domain: entries whose domain conflicts with their index fail clearly (metadata, not ID prefix)", () => {
+  const e1 = domErr(() => resolveRef([ix("production", [ent("real.thing", "1.0.0", "production"), ent("leaked.synthetic", "1.0.0", "synthetic")])], refOf("real.thing")));
   assert.equal(e1.code, "conflicting-domain-metadata"); assert.match(e1.message, /'production' but contains synthetic entry 'leaked\.synthetic'/);
-  // non-synthetic entry inside an example-purpose index
-  const e2 = domErr(() => resolveRef([ix("example", [ent("example.x", "1.0.0", false)])], refOf("example.x"), { domain: "example" }));
-  assert.equal(e2.code, "conflicting-domain-metadata"); assert.match(e2.message, /non-synthetic entry/);
-  // the prefix is irrelevant: an 'example.'-prefixed id with synthetic:false in a production index is accepted,
-  // a plain id with synthetic:true is rejected
-  assert.equal(resolveRef([ix("production", [ent("example.looks-synthetic", "1.0.0", false)])], refOf("example.looks-synthetic")).resolved?.id, "example.looks-synthetic");
-  assert.equal(domErr(() => resolveRef([ix("production", [ent("plain.id", "1.0.0", true)])], refOf("plain.id"))).code, "conflicting-domain-metadata");
+  const e2 = domErr(() => resolveRef([ix("synthetic", [ent("example.x", "1.0.0", "production")])], refOf("example.x"), { domain: "synthetic" }));
+  assert.equal(e2.code, "conflicting-domain-metadata"); assert.match(e2.message, /contains production entry/);
+  // the prefix is irrelevant: an 'example.'-prefixed id declared production is accepted, a plain id declared synthetic in a production index is rejected
+  assert.equal(resolveRef([ix("production", [ent("example.looks-synthetic", "1.0.0", "production")])], refOf("example.looks-synthetic")).resolved?.id, "example.looks-synthetic");
+  assert.equal(domErr(() => resolveRef([ix("production", [ent("plain.id", "1.0.0", "synthetic")])], refOf("plain.id"))).code, "conflicting-domain-metadata");
 });
 
-test("domain: missing domain metadata fails clearly", () => {
-  assert.equal(domErr(() => resolveRef([ix(undefined, [ent("a.b", "1.0.0", false)])], refOf("a.b"))).code, "missing-domain-metadata");
-  assert.equal(domErr(() => resolveRef([ix("staging", [ent("a.b", "1.0.0", false)])], refOf("a.b"))).code, "missing-domain-metadata");
+test("domain: missing domain metadata and unsupported digest algorithms fail clearly", () => {
+  assert.equal(domErr(() => resolveRef([ix(undefined, [ent("a.b", "1.0.0", "production")])], refOf("a.b"))).code, "missing-domain-metadata");
+  assert.equal(domErr(() => resolveRef([ix("staging", [ent("a.b", "1.0.0", "production")])], refOf("a.b"))).code, "missing-domain-metadata");
   const e = domErr(() => resolveRef([ix("production", [ent("a.b", "1.0.0", undefined)])], refOf("a.b")));
-  assert.equal(e.code, "missing-domain-metadata"); assert.match(e.message, /without a boolean 'synthetic' \(first: 'a\.b'\)/);
-  assert.equal(domErr(() => resolveRef([{ registry: "tiny-agents", purpose: "production" }], refOf("a.b"))).code, "missing-domain-metadata");
+  assert.equal(e.code, "missing-domain-metadata"); assert.match(e.message, /without a valid 'domain' \(first: 'a\.b'\)/);
+  assert.equal(domErr(() => resolveRef([{ registry: "tiny-agents", domain: "production" }], refOf("a.b"))).code, "missing-domain-metadata");
   assert.equal(domErr(() => assertIndexDomains([{ registry: "x" } as Doc], "production")).problems.length, 1);
+  assert.equal(domErr(() => resolveRef([{ ...ix("production", [ent("a.b", "1.0.0", "production")]), digestAlgorithm: "zeptly-jcs-v0" }], refOf("a.b"))).code, "unsupported-digest-algorithm");
 });
 
-test("domain: explicit foreign-reference reporting is preserved", () => {
-  const prod = ix("production", [ent("real.thing", "1.0.0", false)]);
+test("domain: explicit foreign-reference reporting is preserved; complete is true only when every entry resolves", () => {
+  const prod = ix("production", [ent("real.thing", "1.0.0", "production")]);
   const out = buildLock([prod], { registry: "tiny-agents", id: "s.s", version: "1.0.0", digest: "sha256:" + "b".repeat(64) }, [refOf("real.thing"), refOf("other.skill", "^1.0.0", "skills")]);
   assert.equal(out.entries.length, 2);
   assert.equal(out.entries[1].status, "unresolved");
   assert.equal(out.entries[1].unresolved.code, "no-peer-index");
+  assert.equal(out.complete, false);
   assert.deepEqual(schemaErrors("runtime-lock", out), []);
 });
 
-test("domain CLI: example roots need --domain example; conflicting root/index metadata fails; production default", () => {
+test("domain CLI: synthetic roots need --domain synthetic; conflicting root/index metadata fails; production default", () => {
   const a = run("lock", "examples/registry", "--id", "example.structured-summary", "--range", "^1.0.0");
   assert.equal(a.status, 2);
   assert.equal(JSON.parse(a.stderr).error.code, "domain-mismatch");
-  const b = run("lock", "examples/registry", "--id", "example.structured-summary", "--range", "^1.0.0", "--domain", "example");
+  const b = run("lock", "examples/registry", "--id", "example.structured-summary", "--range", "^1.0.0", "--domain", "synthetic");
   assert.equal(b.status, 1); // skills reference is unresolved (no peer index), reported explicitly
   const lock = JSON.parse(b.stdout);
   assert.equal(lock.entries[0].unresolved.code, "no-peer-index");
+  assert.equal(lock.complete, false); assert.equal(lock.domain, "synthetic");
   assert.deepEqual(schemaErrors("runtime-lock", lock), []);
-  // root marker says production, index says example
-  const r = tempRoot(); edit(r, "registry.yaml", (d) => { d.purpose = "production"; });
-  const c = run("lock", r, "--id", "example.structured-summary", "--range", "^1.0.0", "--domain", "example");
+  // root marker says production, index says synthetic
+  const r = tempRoot(); edit(r, "registry.yaml", (d) => { d.domain = "production"; });
+  const c = run("lock", r, "--id", "example.structured-summary", "--range", "^1.0.0", "--domain", "synthetic");
   assert.equal(c.status, 2); assert.equal(JSON.parse(c.stderr).error.code, "conflicting-domain-metadata");
   // the real (production) root resolves in the default domain; empty index -> not-found
   const d = run("lock", ".", "--id", "example.structured-summary", "--range", "^1.0.0");
   assert.equal(d.status, 1); assert.equal(JSON.parse(d.stdout).unresolved.code, "not-found");
   // invalid --domain value
   assert.equal(run("lock", ".", "--id", "x.y", "--range", "^1", "--domain", "staging").status, 2);
+  assert.equal(run("lock", ".", "--id", "x.y", "--range", "^1", "--domain", "example").status, 2);
   // resolve with mixed indexes
   const e = run("resolve", "--index", "index/registry-index.json", "--index", "examples/registry/index/registry-index.json", "--registry", "tiny-agents", "--id", "x.y", "--range", "^1");
-  assert.equal(e.status, 2); assert.equal(JSON.parse(e.stderr).error.code, "domain-mismatch");
+  assert.equal(e.status, 2); assert.equal(JSON.parse(e.stderr).error.code, "mixed-domains");
 });
 
 // =================================================================================================
@@ -362,7 +376,7 @@ test("domain CLI: example roots need --domain example; conflicting root/index me
 // =================================================================================================
 
 test("malformed ranges produce invalid-range (local code), not 'no eligible version'", () => {
-  const prod = ix("production", [ent("a.b", "1.2.0", false)]);
+  const prod = ix("production", [ent("a.b", "1.2.0", "production")]);
   for (const bad of ["^^^", "abc", ">=", "", "v1.0.0", "1.0.0 - 2.0.0", ">= 1.0.0", "^1.0.0 ||", "|| ^1", "~", "1.0.0.0", "^1.0.0 abc"]) {
     const out = resolveRef([prod], refOf("a.b", bad));
     assert.equal(out.unresolved?.code, "invalid-range", JSON.stringify(bad));
@@ -372,7 +386,7 @@ test("malformed ranges produce invalid-range (local code), not 'no eligible vers
 });
 
 test("the supported range subset is unchanged and still resolves; valid-but-unsatisfiable is a different code", () => {
-  const prod = ix("production", [ent("a.b", "1.0.0", false), ent("a.b", "1.2.0", false), ent("a.b", "2.0.0", false)]);
+  const prod = ix("production", [ent("a.b", "1.0.0", "production"), ent("a.b", "1.2.0", "production"), ent("a.b", "2.0.0", "production")]);
   const good: [string, string][] = [["1.2.0", "1.2.0"], ["=1.0.0", "1.0.0"], ["^1.0.0", "1.2.0"], ["~1.2.0", "1.2.0"], ["1.x", "1.2.0"], ["1", "1.2.0"], ["1.2", "1.2.0"], [">=1.0.0 <2.0.0", "1.2.0"], ["^1.0.0 || ^2.0.0", "2.0.0"], ["*", "2.0.0"], ["<=1.0.0", "1.0.0"], [">1.2.0", "2.0.0"]];
   for (const [range, want] of good) { assert.equal(isValidRange(range), true, range); assert.equal(resolveRef([prod], refOf("a.b", range)).resolved?.version, want, range); }
   assert.equal(resolveRef([prod], refOf("a.b", "^9.0.0")).unresolved?.code, "no-eligible-version");
@@ -381,7 +395,7 @@ test("the supported range subset is unchanged and still resolves; valid-but-unsa
 });
 
 test("invalid-range in a lock entry: schema-valid, explicit, and the foreign no-peer-index code is unchanged", () => {
-  const prod = ix("production", [ent("a.b", "1.2.0", false)]);
+  const prod = ix("production", [ent("a.b", "1.2.0", "production")]);
   const out = buildLock([prod], { registry: "tiny-agents", id: "s.s", version: "1.0.0", digest: "sha256:" + "b".repeat(64) }, [refOf("a.b", "^^^"), refOf("x.y", "^^^", "skills"), refOf("a.b", "^1.0.0")]);
   assert.deepEqual(out.entries.map((e: Doc) => e.status === "resolved" ? "resolved" : e.unresolved.code), ["invalid-range", "no-peer-index", "resolved"]);
   assert.deepEqual(schemaErrors("runtime-lock", out), []);
@@ -393,12 +407,12 @@ test("invalid-range in a lock entry: schema-valid, explicit, and the foreign no-
 // Preserved contracts
 // =================================================================================================
 
-test("preserved: valid fixtures still validate and their digests, seal and indexes are unchanged", () => {
+test("preserved: valid fixtures still validate; artifact digests are unchanged by the v0.2 projection (seals are new by design)", () => {
   assert.deepEqual(errors(REPO_ROOT), []);
   assert.deepEqual(errors(EXAMPLE), []);
   const e = readJson(join(EXAMPLE, "index", "registry-index.json")).entries.find((x: Doc) => x.id === "example.structured-summary");
   assert.equal(e.digest, "sha256:7c953f60067a549e67b8a454971638cc26abe0d9ab17f7176a7ee5ba59eb78ea");
-  assert.equal(e.sealDigest, "sha256:6ea9d9edb7418f9f961a56de3d2afc1a8978041ab94714659d4d92ddeb5d43c1");
+  assert.equal(e.sealDigest, "sha256:e85c554c25c9c6b2ad0b7d4294df778b2f65ed1998660d7caf82915a43e2f6e1");
   for (const root of [REPO_ROOT, EXAMPLE]) assert.equal(buildIndex(root).text, readFileSync(join(root, "index", "registry-index.json"), "utf8"));
   void parse; void stringify; void cpSync; void append; void C;
 });

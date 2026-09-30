@@ -20,7 +20,7 @@ export function edit(root: string, rel: string, fn: (d: Doc) => void): void {
   const p = join(root, rel);
   const d = parse(readFileSync(p, "utf8")) as Doc;
   fn(d);
-  writeFileSync(p, stringify(d));
+  writeFileSync(p, stringify(d, { aliasDuplicateObjects: false }));
 }
 export const append = (root: string, rel: string, text: string) => writeFileSync(join(root, rel), readFileSync(join(root, rel), "utf8") + text);
 export function errors(root: string, policyPath?: string): string[] {

@@ -2,6 +2,7 @@
   "apiVersion": "registry.zeptly.dev/v1alpha1",
   "kind": "RegistryIndex",
   "registry": "tiny-agents",
-  "purpose": "production",
+  "digestAlgorithm": "zeptly-jcs-v1",
+  "domain": "production",
   "entries": []
 }

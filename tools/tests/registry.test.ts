@@ -29,12 +29,13 @@ test("repository root and synthetic example root validate cleanly", () => {
 test("production root is empty and its index cannot contain synthetic entries", () => {
   assert.equal(validateRoot(REPO_ROOT).versions.length, 0);
   const prod = readJson(join(REPO_ROOT, "index", "registry-index.json"));
-  assert.equal(prod.purpose, "production");
-  assert.ok(prod.entries.every((e: Doc) => e.synthetic === false));
-  // schema-level guard: a production-purpose index with a synthetic entry is invalid
+  assert.equal(prod.domain, "production");
+  assert.ok(prod.entries.every((e: Doc) => e.domain === "production"));
+  // schema-level guard: an index whose top-level domain disagrees with synthetic entries is rejected by the resolver (see domain tests)
   const ex = readJson(join(EXAMPLE, "index", "registry-index.json"));
   assert.deepEqual(schemaErrors("index", ex), []);
-  assert.ok(schemaErrors("index", { ...ex, purpose: "production" }).length > 0);
+  assert.ok(schemaErrors("index", { ...ex, domain: "staging" }).length > 0);
+  assert.ok(schemaErrors("index", { ...ex, digestAlgorithm: "zeptly-jcs-v0" }).length > 0);
 });
 
 test("indexes are deterministic, up to date, and carry the protocol fields", () => {
@@ -44,7 +45,7 @@ test("indexes are deterministic, up to date, and carry the protocol fields", () 
     assert.equal(a, readFileSync(join(root, "index", "registry-index.json"), "utf8"));
   }
   const idx = readJson(join(EXAMPLE, "index", "registry-index.json"));
-  for (const e of idx.entries) for (const f of ["registry", "id", "version", "digest", "maturity", "lifecycle", "origin", "location"]) assert.ok(f in e, `missing ${f}`);
+  for (const e of idx.entries) for (const f of ["registry", "id", "version", "digest", "digestAlgorithm", "sealDigest", "maturity", "lifecycle", "origin", "location", "domain"]) assert.ok(f in e, `missing ${f}`);
   assert.ok(!/\d{4}-\d{2}-\d{2}T/.test(JSON.stringify(idx)), "index must not contain timestamps");
 });
 
@@ -178,7 +179,7 @@ test("no runtime tapes or sensitive payloads: unexpected file types and oversize
   assert.ok(has(errors(r2), "exceeds"));
   const r3 = tempRoot();
   edit(r3, BB, (d) => { d.attestations.push({ type: "recurrence", ref: "evidence://prod/session/abc", subjectDigest: d.attestations[0].subjectDigest }); });
-  assert.ok(has(errors(r3), "example roots require 'evidence://synthetic/'"));
+  assert.ok(has(errors(r3), "synthetic roots require 'evidence://synthetic/'"));
 });
 
 // ---- adaptation contract ------------------------------------------------------------------
@@ -236,7 +237,7 @@ test("discovered candidates must meet the recurrence policy (default 3, but only
   const pol = readYaml(DEFAULT_POLICY);
   pol.wisdomOfComputeDefaults.recurrence.minDistinctWorkspaces = 2;
   const p = join(mkdtempSync(join(tmpdir(), "pol-")), "policy.yaml");
-  writeFileSync(p, stringify(pol));
+  writeFileSync(p, stringify(pol, { aliasDuplicateObjects: false }));
   assert.ok(!has(errors(r, p), "distinct workspaces")); // remaining errors are only the stale attestations caused by this edit
 });
 
@@ -256,7 +257,7 @@ test("refined candidates require canonical parents pinned by digest", () => {
     d.spec.lineage = { recurrence: { distinctWorkspaceCount: 3, executionCount: 12 } };
     d.provenance.transformations = [{ type: "clustering", tool: { name: "synthetic", version: "0" } }];
   });
-  const parent = { registry: "tiny-agents", id: "example.structured-summary", version: "1.0.0", digest: parentDigest };
+  const parent = { registry: "tiny-agents", id: "example.structured-summary", version: "1.0.0", digest: parentDigest, digestAlgorithm: "zeptly-jcs-v1" };
 
   const good = mk(); refine(good, [parent]);
   const es = errors(good).filter((e) => e.includes("structured-summary/1.1.0"));
@@ -284,8 +285,12 @@ test("candidate versioning rules", () => {
 
 test("canonical content is sealed: any edit breaks the integrity digest", () => {
   const r = tempRoot();
+  // the manifest is represented by the ARTIFACT digest (stale attestations and promotion record), the payload by the SEAL
   edit(r, BP, (d) => { d.spec.intent.summary = "Changed after publication."; });
-  assert.ok(has(errors(r), "sealed content changed"));
+  assert.ok(has(errors(r), "stale: subjectDigest"));
+  const r2 = tempRoot();
+  append(r2, `${A}/evals/suite.yaml`, "# tampered\n");
+  assert.ok(has(errors(r2), "sealed content changed"));
 });
 
 test("lifecycle is an append-only overlay: it changes neither digest nor seal, and is indexed independently", () => {
@@ -313,7 +318,7 @@ test("canonical promotion requires reviewers, roles, passing evals and required 
   edit(r2, BP, (d) => { d.attestations = d.attestations.filter((a: Doc) => a.type !== "evaluation"); });
   const es = errors(r2);
   assert.ok(has(es, "promotion requires an attestation of type 'evaluation'"));
-  assert.ok(has(es, "passRate >="));
+  assert.ok(has(es, "promotion requires a passing evaluation attestation bound to suite digest"));
   const r3 = tempRoot();
   edit(r3, BP, (d) => { d.attestations = d.attestations.filter((a: Doc) => a.type !== "security-review"); });
   assert.ok(has(errors(r3), "promotion requires an attestation of type 'security-review'"));
@@ -351,7 +356,7 @@ test("promotion does not invalidate attestations: digest excludes attestations, 
 
 test("synthetic and placeholder content is confined to example roots", () => {
   const r = tempRoot();
-  edit(r, "registry.yaml", (d) => { d.purpose = "production"; });
+  edit(r, "registry.yaml", (d) => { d.domain = "production"; });
   const es = errors(r);
   assert.ok(has(es, "synthetic content is not allowed in a production registry root"));
   assert.ok(has(es, "placeholder identity"));
@@ -359,7 +364,7 @@ test("synthetic and placeholder content is confined to example roots", () => {
   assert.ok(has(es, "synthetic evidence reference in a production root"));
   const r2 = tempRoot();
   edit(r2, BP, (d) => { d.metadata.synthetic = false; });
-  assert.ok(has(errors(r2), "example registry roots require synthetic: true"));
+  assert.ok(has(errors(r2), "synthetic registry roots require synthetic: true"));
 });
 
 test("upstream seeds resolve to a declared source; nothing may be imported while specified-only", () => {
@@ -393,7 +398,7 @@ test("index reports artifact location; consumers need not derive paths from ids"
 
 test("tiny-agents references are checked structurally and against the root; other registries need no network", () => {
   const r = tempRoot();
-  const ref = { registry: "tiny-agents", id: "example.structured-summary", version: "1.0.0", digest: "sha256:" + "0".repeat(64) };
+  const ref = { registry: "tiny-agents", id: "example.structured-summary", version: "1.0.0", digest: "sha256:" + "0".repeat(64), digestAlgorithm: "zeptly-jcs-v1" };
   edit(r, BB, (d) => {
     d.spec.skills.push({ key: "sub", ref, role: "x", required: false });
     d.references.push(ref);
@@ -408,8 +413,8 @@ test("tiny-agents references are checked structurally and against the root; othe
 
 // ---- exact runtime locks ------------------------------------------------------------------
 
-const entry = (id: string, version: string, over: Doc = {}): Doc => ({ registry: "tiny-agents", id, version, digest: "sha256:" + version.replace(/\D/g, "").padEnd(64, "a"), sealDigest: null, maturity: "canonical", lifecycle: "active", synthetic: false, ...over });
-const idxOf = (...entries: Doc[]): Doc => ({ apiVersion: "registry.zeptly.dev/v1alpha1", kind: "RegistryIndex", registry: "tiny-agents", purpose: "production", entries });
+const entry = (id: string, version: string, over: Doc = {}): Doc => ({ registry: "tiny-agents", id, version, digest: "sha256:" + version.replace(/\D/g, "").padEnd(64, "a"), sealDigest: null, digestAlgorithm: "zeptly-jcs-v1", maturity: "canonical", lifecycle: "active", domain: "production", origin: { type: "native" }, location: `x/${id}/${version}`, ...over });
+const idxOf = (...entries: Doc[]): Doc => ({ apiVersion: "registry.zeptly.dev/v1alpha1", kind: "RegistryIndex", registry: "tiny-agents", digestAlgorithm: "zeptly-jcs-v1", domain: "production", entries });
 
 test("resolver turns ranges into exact version + digest; candidates, revoked and deprecated-by-range are excluded", () => {
   const idx = idxOf(entry("x.y", "1.0.0"), entry("x.y", "1.2.0"), entry("x.y", "1.3.0", { lifecycle: "deprecated" }), entry("x.y", "1.4.0", { lifecycle: "revoked" }), entry("x.y", "2.0.0"), entry("x.y", "0.9.0", { maturity: "candidate" }));
@@ -420,9 +425,9 @@ test("resolver turns ranges into exact version + digest; candidates, revoked and
   assert.equal(resolveRef([idx], ref("1.4.0")).unresolved?.code, "no-eligible-version"); // revoked never resolves
   assert.equal(resolveRef([idx], ref("^0.9.0")).unresolved?.code, "no-eligible-version"); // candidate excluded by default
   assert.equal(resolveRef([idx], ref("^0.9.0"), { allowCandidates: true }).resolved?.version, "0.9.0");
-  assert.equal(resolveRef([idx], ref("^1.0.0", { digest: "sha256:" + "f".repeat(64) })).unresolved?.code, "digest-mismatch");
+  assert.equal(resolveRef([idx], ref("^1.0.0", { digest: "sha256:" + "f".repeat(64), digestAlgorithm: "zeptly-jcs-v1" })).unresolved?.code, "digest-mismatch");
   const pinned = resolveRef([idx], ref("^1.0.0")).resolved!;
-  assert.equal(resolveRef([idx], ref("^1.0.0", { digest: pinned.digest })).resolved?.digest, pinned.digest);
+  assert.equal(resolveRef([idx], ref("^1.0.0", { digest: pinned.digest, digestAlgorithm: "zeptly-jcs-v1" })).resolved?.digest, pinned.digest);
 });
 
 test("lock is deterministic, schema-valid, and lists foreign references explicitly as unresolved (never omitted)", () => {
@@ -430,7 +435,7 @@ test("lock is deterministic, schema-valid, and lists foreign references explicit
   const bp = readYaml(join(EXAMPLE, BP));
   const me = idx.entries.find((e: Doc) => e.id === "example.structured-summary");
   const subject = { registry: "tiny-agents", id: me.id, version: me.version, digest: me.digest };
-  const ex = { domain: "example" as const }; // the example index must be resolved explicitly as the example domain
+  const ex = { domain: "synthetic" as const }; // the synthetic index must be resolved explicitly as the synthetic domain
   const a = buildLock([idx], subject, bp.references, ex), b = buildLock([idx], subject, bp.references, ex);
   assert.deepEqual(a, b);
   assert.deepEqual(schemaErrors("runtime-lock", a), []);
@@ -439,8 +444,8 @@ test("lock is deterministic, schema-valid, and lists foreign references explicit
   assert.equal(a.entries[0].unresolved.code, "no-peer-index");
   assert.equal(a.entries[0].requested.registry, "skills");
   // same reference with a supplied peer index resolves (mechanics only; synthetic index)
-  const peer = idxOf(entry("synthetic.summarise-text", "1.2.0", { registry: "skills", synthetic: true }));
-  peer.registry = "skills"; peer.purpose = "example";
+  const peer = idxOf(entry("synthetic.summarise-text", "1.2.0", { registry: "skills", domain: "synthetic" }));
+  peer.registry = "skills"; peer.domain = "synthetic";
   const c = buildLock([idx, peer], subject, bp.references, ex);
   assert.equal(c.entries[0].status, "resolved");
   assert.equal(c.entries[0].resolved.version, "1.2.0");
@@ -462,7 +467,7 @@ test("git immutability check: published canonical files cannot change; lifecycle
 
   const doc = parse(readFileSync(lc, "utf8"));
   doc.state = "deprecated"; doc.history.push({ state: "deprecated", at: "2026-03-01T00:00:00Z", reason: "x", actor: "PLACEHOLDER-a" });
-  writeFileSync(lc, stringify(doc));
+  writeFileSync(lc, stringify(doc, { aliasDuplicateObjects: false }));
   git("commit", "-qam", "deprecate");
   assert.deepEqual(checkImmutability(d, "HEAD~1"), []);
 
@@ -471,7 +476,7 @@ test("git immutability check: published canonical files cannot change; lifecycle
   assert.ok(checkImmutability(d, "HEAD~1").some((x) => x.message.includes("immutable")));
 
   const doc2 = parse(readFileSync(lc, "utf8")); doc2.history[0].reason = "rewritten";
-  writeFileSync(lc, stringify(doc2)); git("commit", "-qam", "rewrite");
+  writeFileSync(lc, stringify(doc2, { aliasDuplicateObjects: false })); git("commit", "-qam", "rewrite");
   assert.ok(checkImmutability(d, "HEAD~1").some((x) => x.message.includes("append-only")));
 
   writeFileSync(join(d, A, "extra.yaml"), "a: 1\n"); git("add", "-A"); git("commit", "-qm", "add");

@@ -1,13 +1,58 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:zeptly:tiny-agents:schema:integrity",
-  "title": "Version-directory seal (PROVISIONAL digest convention)",
+  "title": "Version-directory seal (Protocol v0.2, zeptly-jcs-v1)",
+  "description": "seal digest = sha256(JCS({registry,id,version,payload})); payload lists every permitted payload file (policy files.payload) with its SHA-256 (bare lowercase hex), ordered by code-point path order.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["integrityVersion", "digest", "files"],
+  "required": [
+    "integrityVersion",
+    "digestAlgorithm",
+    "registry",
+    "id",
+    "version",
+    "digest",
+    "payload"
+  ],
   "properties": {
-    "integrityVersion": { "const": "integrity/v0-provisional" },
-    "digest": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digest" },
-    "files": { "type": "object", "minProperties": 1, "additionalProperties": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digest" } }
+    "integrityVersion": {
+      "const": "integrity/v0.2"
+    },
+    "digestAlgorithm": {
+      "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digestAlgorithm"
+    },
+    "registry": {
+      "const": "tiny-agents"
+    },
+    "id": {
+      "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryId"
+    },
+    "version": {
+      "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/semver"
+    },
+    "digest": {
+      "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digest"
+    },
+    "payload": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "sha256"
+        ],
+        "properties": {
+          "path": {
+            "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/relPath"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      }
+    }
   }
 }

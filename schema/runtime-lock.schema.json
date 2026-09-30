@@ -2,13 +2,16 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:zeptly:tiny-agents:schema:runtime-lock",
   "title": "Exact runtime lock",
-  "description": "Range -> exact version + content digest. One entry per declared reference, in declaration order; a reference that cannot be resolved (for example because no peer index for its registry was supplied) is listed with status 'unresolved' and a reason code, never omitted. Deterministic: no timestamps. Resolution runs in a single domain (production by default; example only when requested explicitly); indexes of another domain are rejected before any lock is produced.",
+  "description": "Protocol v0.2 RuntimeLock. Range -> exact version + artifact digest. One entry per declared reference, in declaration order; a reference that cannot be resolved is listed with status 'unresolved' and a reason code, never omitted. `complete` is true only when every entry is resolved. Deterministic: no timestamps. Resolution runs in a single domain (production or synthetic); indexes of another domain are rejected before any lock is produced. Transitive resolution and cycle detection are runtime responsibilities.",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "apiVersion",
     "kind",
+    "digestAlgorithm",
+    "domain",
     "subject",
+    "complete",
     "entries"
   ],
   "properties": {
@@ -65,10 +68,11 @@
                 "type": "object",
                 "additionalProperties": false,
                 "required": [
-                  "registry",
+                  "digest",
+                  "digestAlgorithm",
                   "id",
-                  "version",
-                  "digest"
+                  "registry",
+                  "version"
                 ],
                 "properties": {
                   "registry": {
@@ -98,6 +102,9 @@
                       "candidate",
                       "canonical"
                     ]
+                  },
+                  "digestAlgorithm": {
+                    "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digestAlgorithm"
                   }
                 }
               }
@@ -145,6 +152,16 @@
           }
         ]
       }
+    },
+    "digestAlgorithm": {
+      "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digestAlgorithm"
+    },
+    "domain": {
+      "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/domain"
+    },
+    "complete": {
+      "type": "boolean",
+      "description": "true only when every entry is resolved (and entries is not empty of declared references that failed)."
     }
   }
 }

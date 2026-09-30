@@ -4,7 +4,9 @@
   "private": true,
   "description": "Zeptly registry of Tiny Agent Blueprints (blueprints persist; running Tiny Agents do not). Protocol conventions are PROVISIONAL.",
   "type": "module",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tools/tests/*.test.ts",
@@ -12,7 +14,8 @@
     "validate": "tsx tools/src/cli.ts validate . && tsx tools/src/cli.ts validate examples/registry",
     "index": "tsx tools/src/cli.ts index . && tsx tools/src/cli.ts index examples/registry",
     "index:check": "tsx tools/src/cli.ts index . --check && tsx tools/src/cli.ts index examples/registry --check",
-    "check": "npm run typecheck && npm test && npm run validate && npm run index:check"
+    "check": "npm run typecheck && npm test && npm run vectors && npm run validate && npm run index:check",
+    "vectors": "python3 vectors/zeptly_jcs_v1.py verify"
   },
   "dependencies": {
     "ajv": "^8.17.1",
