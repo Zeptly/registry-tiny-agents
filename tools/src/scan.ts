@@ -5,7 +5,7 @@
  */
 import { readFileSync } from "node:fs";
 import { extname } from "node:path";
-import { readData, type Doc } from "./load.js";
+import { parseFileChecked, type Doc } from "./load.js";
 
 export interface Finding { file: string; path: string; detector: string; message: string }
 
@@ -39,14 +39,15 @@ export class Scanner {
   scanValue(value: unknown, file: string, path = ""): Finding[] {
     if (typeof value === "string") return this.scanText(value, file, path);
     if (Array.isArray(value)) {
-      const turns = value.filter((v) => v && typeof v === "object" && !Array.isArray(v) && "role" in (v as Doc)).length;
-      const f: Finding[] = turns >= 2 ? [{ file, path, detector: "transcript-structure", message: "array of role-tagged turns looks like a conversation transcript" }] : [];
+      // An array of "role: text" strings is a transcript; an array of objects that merely carry a `role` field
+      // (skills, approvals, reviewers, ...) is NOT. Object turns are detected individually below.
+      const prefixed = value.filter((v) => typeof v === "string" && TURN_PREFIX.test(v)).length;
+      const f: Finding[] = prefixed >= 2 ? [{ file, path, detector: "transcript-structure", message: "array of speaker-prefixed lines looks like a conversation transcript" }] : [];
       return [...f, ...value.flatMap((v, i) => this.scanValue(v, file, `${path}[${i}]`))];
     }
     if (value && typeof value === "object") {
-      const keys = Object.keys(value as Doc).map((k) => k.toLowerCase());
-      const turn: Finding[] = keys.includes("role") && keys.includes("content")
-        ? [{ file, path, detector: "transcript-structure", message: "object with role+content looks like a conversation turn" }] : [];
+      const turn: Finding[] = isConversationTurn(value as Doc)
+        ? [{ file, path, detector: "transcript-structure", message: "object with a conversation role (user/assistant/system/tool/…) and message content looks like a conversation turn" }] : [];
       return [...turn, ...Object.entries(value as Doc).flatMap(([k, v]) => {
         const p = path ? `${path}.${k}` : k;
         const f: Finding[] = this.keys.has(k.toLowerCase())
@@ -58,22 +59,42 @@ export class Scanner {
     return [];
   }
 
-  scanFile(file: string): Finding[] {
-    const ext = extname(file);
-    const raw = readFileSync(file, "utf8");
-    if (ext === ".md") return this.scanText(raw, file, "<markdown>");
-    if (ext !== ".yaml" && ext !== ".yml" && ext !== ".json") {
-      return [{ file, path: "", detector: "unexpected-file-type", message: `file type '${ext}' is not allowed in registry content` }];
-    }
+  /** Scan an already-parsed document plus its raw text (YAML comments are not part of the parsed value). */
+  scanParsed(doc: unknown, raw: string, file: string): Finding[] {
     const findings: Finding[] = [];
-    if (ext !== ".json") {
-      // YAML comments are not part of the parsed value; scan them separately.
+    if (!file.endsWith(".json")) {
       for (const [i, line] of raw.split("\n").entries()) {
         const m = /(^|\s)#(.*)$/.exec(line);
         if (m) findings.push(...this.scanText(m[2]!, file, `<comment line ${i + 1}>`));
       }
     }
-    findings.push(...this.scanValue(readData(file), file));
+    findings.push(...this.scanValue(doc, file));
     return findings;
   }
+
+  /** Never throws: unreadable or unparseable files produce a `parse-error` finding instead of an exception. */
+  scanFile(file: string): Finding[] {
+    const ext = extname(file);
+    let raw: string;
+    try { raw = readFileSync(file, "utf8"); } catch (e) { return [{ file, path: "", detector: "parse-error", message: `cannot read file: ${(e as Error).message}` }]; }
+    if (ext === ".md") return this.scanText(raw, file, "<markdown>");
+    if (ext !== ".yaml" && ext !== ".yml" && ext !== ".json") {
+      return [{ file, path: "", detector: "unexpected-file-type", message: `file type '${ext}' is not allowed in registry content` }];
+    }
+    const r = parseFileChecked(file);
+    if (!r.doc) return r.problems.map((m) => ({ file, path: "", detector: "parse-error", message: m }));
+    return this.scanParsed(r.doc, raw, file);
+  }
+}
+
+const CONVERSATION_ROLES = new Set(["user", "assistant", "system", "tool", "function", "human", "ai", "developer"]);
+const ROLE_KEYS = new Set(["role", "from", "speaker"]);
+const CONTENT_KEYS = new Set(["content", "text", "message", "parts", "value", "tool_calls", "toolcalls", "tool_call_id", "function_call"]);
+const TURN_PREFIX = /^\s{0,16}(?:user|assistant|system|human|ai|tool)\s{0,4}:/i;
+
+/** A conversation turn = a conversation-role value in a role-like key AND a message-content sibling key. */
+function isConversationTurn(o: Doc): boolean {
+  const keys = Object.keys(o);
+  const roleKey = keys.find((k) => ROLE_KEYS.has(k.toLowerCase()) && typeof o[k] === "string" && CONVERSATION_ROLES.has((o[k] as string).trim().toLowerCase()));
+  return roleKey !== undefined && keys.some((k) => CONTENT_KEYS.has(k.toLowerCase()));
 }

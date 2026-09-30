@@ -26,6 +26,21 @@ workspace facts must not become global blueprint content. Workspace-private blue
    `workspaceId`, …), URLs, IPs, emails, secrets/tokens/keys, executable commands, concrete model IDs, workspace-like
    identifiers and UUIDs. Matched text is never echoed. Unknown file types are rejected. Exemptions are per
    detector *and* per JSON path, in policy.
+
+   **Transcript detection is contextual.** A conversation turn is an object with a conversation role
+   (`user`, `assistant`, `system`, `tool`, `function`, `human`, `ai`, `developer`) in a `role`/`from`/`speaker` field
+   **and** a message-content sibling (`content`, `text`, `message`, `parts`, `value`, `tool_calls`, …); arrays of
+   `role: text` strings and multi-line transcript text are also detected. An array of objects that merely carry a
+   `role` field — `spec.skills[]`, `security.approvals[]`, `promotion.yaml` reviewers — is **not** a transcript, so
+   multiple skills, approvals and reviewers validate.
+
+   **Failures are diagnostics, not crashes.** Invalid YAML/JSON, duplicate keys, lone surrogates, non-finite or
+   unsafe numbers and unsupported values produce a file/path diagnostic; such a file is reported once, never scanned,
+   loaded, hashed or indexed, and the run fails.
+
+   **Scanner cost.** Every pattern is bounded so scan time is linear in input size. The pattern that was quadratic
+   before the bound was added was `concrete-model-id` (566 / 2153 / 8300 ms at 20k / 40k / 80k characters); the
+   `email` pattern was not the slow one. A regression test feeds inputs at the file-size cap with a fixed time ceiling.
 8. **Human review.** Promotion requires reviewers by class, including a `privacy` role for evolved blueprints. Nothing
    is auto-merged.
 9. **Root purpose.** A `production` root rejects synthetic content and placeholder identities; an `example` root

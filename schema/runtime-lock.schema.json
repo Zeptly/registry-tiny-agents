@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:zeptly:tiny-agents:schema:runtime-lock",
   "title": "Exact runtime lock",
-  "description": "Range -> exact version + content digest. One entry per declared reference, in declaration order; a reference that cannot be resolved (for example because no peer index for its registry was supplied) is listed with status 'unresolved' and a reason code, never omitted. Deterministic: no timestamps.",
+  "description": "Range -> exact version + content digest. One entry per declared reference, in declaration order; a reference that cannot be resolved (for example because no peer index for its registry was supplied) is listed with status 'unresolved' and a reason code, never omitted. Deterministic: no timestamps. Resolution runs in a single domain (production by default; example only when requested explicitly); indexes of another domain are rejected before any lock is produced.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -131,8 +131,10 @@
                       "no-peer-index",
                       "not-found",
                       "no-eligible-version",
-                      "digest-mismatch"
-                    ]
+                      "digest-mismatch",
+                      "invalid-range"
+                    ],
+                    "description": "'invalid-range' is a registry-local code pending the shared code list."
                   },
                   "message": {
                     "type": "string"

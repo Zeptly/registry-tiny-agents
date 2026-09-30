@@ -27,9 +27,13 @@ export function checkImmutability(repoDir: string, base: string, head = "HEAD"):
       const existing = git("ls-tree", "-r", "--name-only", base, "--", dir).trim();
       if (existing && rest !== "lifecycle.yaml") err(path, "file added to an already-published canonical version directory");
     } else if (rest === "lifecycle.yaml" && status === "M") {
-      const before = yamlParse(git("show", `${base}:${path}`)).history as unknown[];
-      const after = yamlParse(git("show", `${head}:${path}`)).history as unknown[];
-      if (after.length < before.length || JSON.stringify(after.slice(0, before.length)) !== JSON.stringify(before)) err(path, "lifecycle history is append-only");
+      let before: unknown[], after: unknown[];
+      try {
+        before = yamlParse(git("show", `${base}:${path}`)).history as unknown[];
+        after = yamlParse(git("show", `${head}:${path}`)).history as unknown[];
+      } catch (e) { err(path, `cannot compare lifecycle history: ${(e as Error).message.split("\n")[0]}`); continue; }
+      if (!Array.isArray(before) || !Array.isArray(after)) err(path, "lifecycle history is missing or not a list");
+      else if (after.length < before.length || JSON.stringify(after.slice(0, before.length)) !== JSON.stringify(before)) err(path, "lifecycle history is append-only");
     } else {
       err(path, `published canonical content is immutable (status ${status}); publish a new version or change lifecycle instead`);
     }

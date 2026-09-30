@@ -45,10 +45,13 @@ attestations: []       # digest-bound
   reserved synthetic namespace, not an ID convention for production.
 * **Runtime lock** (`schema/runtime-lock.schema.json`): `subject` plus one ordered `entries[]` item per declared
   reference, each `status: resolved | unresolved`. Unresolved items carry a code (`no-peer-index`, `not-found`,
-  `no-eligible-version`, `digest-mismatch`); foreign references are never omitted.
+  `no-eligible-version`, `digest-mismatch`, and the registry-local `invalid-range`); foreign references are never
+  omitted. Resolution is domain-isolated (production by default; example only explicitly) — see
+  [RUNTIME-CONTRACT.md](RUNTIME-CONTRACT.md).
 * **Content safety**: explicit filename allow-list (`policy files.allow`), per-file / per-directory / file-count limits,
   symbolic links and special files rejected and never followed, LF-only UTF-8, and tape/trace/transcript detection
-  (forbidden keys, role-tagged turn structures, transcript text and opaque-blob patterns).
+  (forbidden keys, contextual conversation-turn structures, transcript text and opaque-blob patterns); invalid
+  documents and values are controlled diagnostics (see [CANONICALIZATION.md](CANONICALIZATION.md) value domain).
 
 ## Identity is decoupled from layout
 

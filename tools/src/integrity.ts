@@ -9,6 +9,7 @@ import { join } from "node:path";
 import { FILES, listFilesRecursive } from "./layout.js";
 import type { Doc } from "./load.js";
 import { compareCodePoints } from "./order.js";
+import { CanonicalizationError, validateValueDomain } from "./valuedomain.js";
 
 export const sha256 = (data: Buffer | string): string => "sha256:" + createHash("sha256").update(data).digest("hex");
 export const fileDigest = (path: string): string => sha256(readFileSync(path));
@@ -46,6 +47,8 @@ export function canonicalJson(v: unknown): string {
       return JSON.stringify(v);
     case "object": {
       if (Array.isArray(v)) return `[${v.map(canonicalJson).join(",")}]`;
+      const proto = Object.getPrototypeOf(v);
+      if (proto !== Object.prototype && proto !== null) throw new Error("canonicalJson: unsupported object type (only plain objects and arrays)");
       const o = v as Doc;
       return `{${Object.keys(o).sort(compareCodePoints).map((k) => `${canonicalJson(k)}:${canonicalJson(o[k])}`).join(",")}}`;
     }
@@ -60,6 +63,9 @@ export function canonicalJson(v: unknown): string {
  * the document at all. The directory seal is a separate mechanism covering the canonical payload files.
  */
 export function contentDigest(doc: Doc): string {
+  // Validate the value domain BEFORE cloning: JSON.stringify would turn NaN/Infinity into null and drop undefined.
+  const problems = validateValueDomain(doc);
+  if (problems.length) throw new CanonicalizationError(problems);
   const c = JSON.parse(JSON.stringify(doc)) as Doc;
   delete c.attestations;
   if (c.metadata) { delete c.metadata.version; delete c.metadata.maturity; }

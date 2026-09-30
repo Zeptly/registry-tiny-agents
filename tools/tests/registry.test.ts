@@ -408,7 +408,7 @@ test("tiny-agents references are checked structurally and against the root; othe
 
 // ---- exact runtime locks ------------------------------------------------------------------
 
-const entry = (id: string, version: string, over: Doc = {}): Doc => ({ registry: "tiny-agents", id, version, digest: "sha256:" + version.replace(/\D/g, "").padEnd(64, "a"), sealDigest: null, maturity: "canonical", lifecycle: "active", ...over });
+const entry = (id: string, version: string, over: Doc = {}): Doc => ({ registry: "tiny-agents", id, version, digest: "sha256:" + version.replace(/\D/g, "").padEnd(64, "a"), sealDigest: null, maturity: "canonical", lifecycle: "active", synthetic: false, ...over });
 const idxOf = (...entries: Doc[]): Doc => ({ apiVersion: "registry.zeptly.dev/v1alpha1", kind: "RegistryIndex", registry: "tiny-agents", purpose: "production", entries });
 
 test("resolver turns ranges into exact version + digest; candidates, revoked and deprecated-by-range are excluded", () => {
@@ -430,7 +430,8 @@ test("lock is deterministic, schema-valid, and lists foreign references explicit
   const bp = readYaml(join(EXAMPLE, BP));
   const me = idx.entries.find((e: Doc) => e.id === "example.structured-summary");
   const subject = { registry: "tiny-agents", id: me.id, version: me.version, digest: me.digest };
-  const a = buildLock([idx], subject, bp.references), b = buildLock([idx], subject, bp.references);
+  const ex = { domain: "example" as const }; // the example index must be resolved explicitly as the example domain
+  const a = buildLock([idx], subject, bp.references, ex), b = buildLock([idx], subject, bp.references, ex);
   assert.deepEqual(a, b);
   assert.deepEqual(schemaErrors("runtime-lock", a), []);
   assert.equal(a.entries.length, bp.references.length); // one entry per declared reference
@@ -438,14 +439,14 @@ test("lock is deterministic, schema-valid, and lists foreign references explicit
   assert.equal(a.entries[0].unresolved.code, "no-peer-index");
   assert.equal(a.entries[0].requested.registry, "skills");
   // same reference with a supplied peer index resolves (mechanics only; synthetic index)
-  const peer = idxOf(entry("synthetic.summarise-text", "1.2.0", { registry: "skills" }));
-  peer.registry = "skills";
-  const c = buildLock([idx, peer], subject, bp.references);
+  const peer = idxOf(entry("synthetic.summarise-text", "1.2.0", { registry: "skills", synthetic: true }));
+  peer.registry = "skills"; peer.purpose = "example";
+  const c = buildLock([idx, peer], subject, bp.references, ex);
   assert.equal(c.entries[0].status, "resolved");
   assert.equal(c.entries[0].resolved.version, "1.2.0");
   assert.deepEqual(schemaErrors("runtime-lock", c), []);
   // peer index present but artifact absent -> not-found, still explicit
-  const d = buildLock([idx, { ...peer, entries: [] }], subject, bp.references);
+  const d = buildLock([idx, { ...peer, entries: [] }], subject, bp.references, ex);
   assert.equal(d.entries[0].unresolved.code, "not-found");
 });
 

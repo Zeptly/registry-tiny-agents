@@ -2,6 +2,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse } from "yaml";
+import { validateValueDomain } from "./valuedomain.js";
 import Ajv2020Module from "ajv/dist/2020.js";
 import addFormatsModule from "ajv-formats";
 import { readdirSync } from "node:fs";
@@ -23,6 +24,26 @@ export function readData(path: string): Doc {
   return path.endsWith(".json") ? readJson(path) : readYaml(path);
 }
 export const exists = existsSync;
+
+/**
+ * Parse a YAML/JSON file WITHOUT throwing. Returns the document, or a list of human-readable problems
+ * (syntax errors with line/column, duplicate keys, unsupported/non-finite/unsafe values, lone surrogates with JSON paths).
+ * A document with any problem is never returned, so nothing downstream can hash or validate it.
+ */
+export function parseFileChecked(path: string): { doc?: Doc; problems: string[] } {
+  let text: string;
+  try { text = readFileSync(path, "utf8"); } catch (e) { return { problems: [`cannot read file: ${(e as Error).message}`] }; }
+  let doc: Doc;
+  try {
+    doc = (path.endsWith(".json") ? JSON.parse(text) : parse(text, { uniqueKeys: true })) as Doc;
+  } catch (e) {
+    const err = e as Error & { linePos?: { line: number; col: number }[]; code?: string };
+    const pos = err.linePos?.[0] ? ` (line ${err.linePos[0].line}, column ${err.linePos[0].col})` : "";
+    return { problems: [`cannot parse ${path.endsWith(".json") ? "JSON" : "YAML"}: ${err.message.split("\n")[0]}${pos}`] };
+  }
+  const problems = validateValueDomain(doc).map((p) => `invalid value at ${p.path}: ${p.message} [${p.code}]`);
+  return problems.length ? { problems } : { doc, problems: [] };
+}
 
 // CJS/ESM interop
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

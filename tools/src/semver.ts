@@ -72,3 +72,15 @@ export function satisfies(version: string, range: string): boolean {
     });
   });
 }
+
+/**
+ * True when every `||` alternative is a non-empty, space-separated list of tokens in the supported range subset
+ * (exact, ^, ~, x/* partials, comparators >= > <= < = glued to a version). The same grammar `satisfies` evaluates.
+ */
+export function isValidRange(range: string): boolean {
+  if (range.length === 0 || range.length > 64) return false;
+  return range.split("||").every((alt) => {
+    const toks = alt.trim().split(/\s+/).filter(Boolean);
+    return toks.length > 0 && toks.every((t) => expand(t) !== null);
+  });
+}

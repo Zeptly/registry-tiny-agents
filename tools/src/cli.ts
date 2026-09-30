@@ -5,13 +5,13 @@ import { writeIndex } from "./index-gen.js";
 import { sealDir, fileDigest } from "./integrity.js";
 import { checkImmutability } from "./immutability.js";
 import { Scanner } from "./scan.js";
-import { DEFAULT_POLICY, REPO_ROOT, readJson, readYaml, schemaErrors, type Doc } from "./load.js";
-import { buildLock, resolveRef } from "./resolve.js";
+import { DEFAULT_POLICY, REPO_ROOT, parseFileChecked, readYaml, schemaErrors, type Doc } from "./load.js";
+import { DomainError, buildLock, resolveRef, type Domain } from "./resolve.js";
 
 const [cmd, ...rest] = process.argv.slice(2);
 const flag = (n: string) => rest.includes(`--${n}`);
 const opt = (n: string) => { const i = rest.indexOf(`--${n}`); return i >= 0 ? rest[i + 1] : undefined; };
-const VALUE_FLAGS = ["policy", "base", "index", "registry", "id", "range", "digest", "version"];
+const VALUE_FLAGS = ["policy", "base", "index", "registry", "id", "range", "digest", "version", "domain"];
 const opts = (n: string) => rest.flatMap((a, i) => (a === `--${n}` && rest[i + 1] ? [rest[i + 1]!] : []));
 const positional = rest.filter((a, i) => !a.startsWith("--") && !VALUE_FLAGS.includes((rest[i - 1] ?? "").slice(2)));
 
@@ -21,11 +21,25 @@ const USAGE = `usage:
   registry scan <file...>                        run the privacy scanner on files
   registry seal <version-dir>                    write integrity.json for a version directory
   registry digest <file>                         print a file digest
-  registry resolve --index <file>... --registry <r> --id <id> --range <range> [--digest <d>] [--allow-candidates]
-  registry lock <root> --id <id> --range <range> [--index <file>...] [--allow-candidates]
+  registry resolve --index <file>... --registry <r> --id <id> --range <range> [--digest <d>] [--allow-candidates] [--domain production|example]
+  registry lock <root> --id <id> --range <range> [--index <file>...] [--allow-candidates] [--domain production|example]
+                                                 (default domain: production; example indexes need --domain example)
                                                  resolve an artifact and ALL its references to an exact runtime lock
                                                  (unresolved references are listed explicitly, exit 1)
   registry check-immutability --base <ref>       verify canonical dirs are unchanged vs a Git ref`;
+
+/** Parse a YAML/JSON file or throw one Error that carries every problem (never a raw parser stack trace). */
+function readChecked(path: string): Doc {
+  const r = parseFileChecked(path);
+  if (!r.doc) throw new Error(`${path}: ${r.problems.join("; ")}`);
+  return r.doc;
+}
+/** Production is the default; example resolution must be requested explicitly. */
+function parseDomain(v: string | undefined): Domain {
+  if (v === undefined || v === "production") return "production";
+  if (v === "example") return "example";
+  throw new Error("--domain must be 'production' or 'example'");
+}
 
 function main(): number {
   switch (cmd) {
@@ -56,21 +70,26 @@ function main(): number {
       return ds.length ? 1 : 0;
     }
     case "resolve": {
-      const idx = opts("index").map((f) => readJson(resolve(f)));
+      const idx = opts("index").map((f) => readChecked(resolve(f)));
       const ref = { registry: opt("registry") ?? "", id: opt("id") ?? "", version: opt("range") ?? "", ...(opt("digest") ? { digest: opt("digest") } : {}) };
-      const out = resolveRef(idx, ref, { allowCandidates: flag("allow-candidates") });
+      const out = resolveRef(idx, ref, { allowCandidates: flag("allow-candidates"), domain: parseDomain(opt("domain")) });
       console.log(JSON.stringify(out, null, 2));
       return out.resolved ? 0 : 1;
     }
     case "lock": {
       const root = resolve(positional[0] ?? ".");
-      const own = readJson(resolve(root, "index", "registry-index.json"));
-      const idx = [own, ...opts("index").map((f) => readJson(resolve(f)))];
+      const domain = parseDomain(opt("domain"));
+      const own = readChecked(resolve(root, "index", "registry-index.json"));
+      const marker = parseFileChecked(resolve(root, "registry.yaml"));
+      if (marker.doc && marker.doc.purpose !== own.purpose) {
+        throw new DomainError("conflicting-domain-metadata", [{ code: "conflicting-domain-metadata", message: `registry.yaml purpose '${marker.doc.purpose}' conflicts with index purpose '${own.purpose}'` }]);
+      }
+      const idx = [own, ...opts("index").map((f) => readChecked(resolve(f)))];
       const allowCandidates = flag("allow-candidates");
-      const top = resolveRef(idx, { registry: "tiny-agents", id: opt("id") ?? "", version: opt("range") ?? "" }, { allowCandidates });
+      const top = resolveRef(idx, { registry: "tiny-agents", id: opt("id") ?? "", version: opt("range") ?? "" }, { allowCandidates, domain });
       if (!top.resolved) { console.log(JSON.stringify(top, null, 2)); return 1; }
-      const bp = readYaml(resolve(root, top.resolved.location ?? "", "blueprint.yaml"));
-      const lock = buildLock(idx, { registry: top.resolved.registry, id: top.resolved.id, version: top.resolved.version, digest: top.resolved.digest }, bp.references, { allowCandidates });
+      const bp = readChecked(resolve(root, top.resolved.location ?? "", "blueprint.yaml"));
+      const lock = buildLock(idx, { registry: top.resolved.registry, id: top.resolved.id, version: top.resolved.version, digest: top.resolved.digest }, bp.references, { allowCandidates, domain });
       const bad = schemaErrors("runtime-lock", lock);
       if (bad.length) { console.error(bad.join("\n")); return 1; }
       console.log(JSON.stringify(lock, null, 2));
@@ -79,4 +98,11 @@ function main(): number {
     default: console.log(USAGE); return cmd ? 2 : 0;
   }
 }
-process.exit(main());
+function run(): number {
+  try { return main(); } catch (e) {
+    if (e instanceof DomainError) { console.error(JSON.stringify({ error: { code: e.code, problems: e.problems } }, null, 2)); return 2; }
+    console.error(`error: ${(e as Error).message}`);
+    return 2;
+  }
+}
+process.exit(run());

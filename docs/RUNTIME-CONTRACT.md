@@ -15,7 +15,18 @@ What the runtime may rely on from this registry:
 * the resolver (`tools/src/resolve.ts`): declared range → exact version → content digest → **runtime lock**
   (`schema/runtime-lock.schema.json`), which the runtime records in its execution evidence. Ranges resolve to active
   canonical versions only. The lock has a `subject` and one entry per declared reference; references that cannot be
-  resolved (for example no peer index supplied) appear as `status: unresolved` with a reason code, never omitted;
+  resolved (for example no peer index supplied) appear as `status: unresolved` with a reason code, never omitted.
+  Reason codes: `no-peer-index`, `not-found`, `no-eligible-version`, `digest-mismatch`, and the registry-**local**
+  `invalid-range` (the range is not in the supported subset: exact, `^`, `~`, `x/*` partials, `>= > <= < =` glued to a
+  version, space = AND, `||` = OR). A valid but unsatisfiable range is `no-eligible-version`, never `invalid-range`;
+* **domain isolation** (registry-local): every resolution runs in exactly one domain — `production` (default) or
+  `example` (only when requested explicitly, `--domain example`). Every supplied index must declare a matching
+  `purpose` and a boolean `synthetic` on every entry, consistent with it; otherwise resolution fails with a
+  `DomainError` (`domain-mismatch`, `missing-domain-metadata` or `conflicting-domain-metadata`) — the CLI prints the
+  error as JSON on stderr and exits 2 — before any lock is produced. An ID prefix is never the only guard. `lock`
+  also cross-checks the root's `registry.yaml` purpose against its index. The lock itself carries no domain marker
+  (unresolved foreign references are still listed explicitly); CLI exit statuses: 0 all resolved, 1 any unresolved,
+  2 input/usage/domain error;
 * the adaptation contract (`mayAlter` / `mustPreserve` / `locked`) as the compiler's boundary;
 * abstract capabilities and model policy, which the runtime maps to concrete tools/models it controls;
 * effect classes, approval and compensation declarations for governing execution;

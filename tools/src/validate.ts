@@ -1,6 +1,6 @@
 import { readFileSync, statSync } from "node:fs";
 import { join, resolve, sep } from "node:path";
-import { DEFAULT_POLICY, exists, readData, readYaml, schemaErrors, type Doc, type SchemaName } from "./load.js";
+import { DEFAULT_POLICY, exists, parseFileChecked, readYaml, schemaErrors, type Doc, type SchemaName } from "./load.js";
 import { FILES, discoverVersionDirs, expectedDir, findUnsafeEntries, inspectTree, listUpstreamSources, toPosix, type Maturity, type VersionDir } from "./layout.js";
 import { textPolicyViolation } from "./textpolicy.js";
 import { computeIntegrity, contentDigest, fileDigest } from "./integrity.js";
@@ -51,10 +51,20 @@ export function validateRoot(rootArg: string, opts: { policyPath?: string } = {}
     es.forEach((e) => err(where, `schema(${name}): ${e}`));
     return es.length === 0;
   };
+  // Every YAML/JSON file is parsed and value-checked exactly once. A file that fails (syntax, duplicate keys, invalid
+  // values, policy rejection) is reported once and is never loaded, hashed or reported as valid.
+  const parsed = new Map<string, { doc?: Doc; problems: string[]; reported: boolean }>();
+  const parseChecked = (path: string, where: string): Doc | undefined => {
+    let e = parsed.get(path);
+    if (!e) { const r = parseFileChecked(path); e = { doc: r.doc, problems: r.problems, reported: false }; parsed.set(path, e); }
+    if (!e.doc && !e.reported) { e.problems.forEach((m) => err(where, m)); e.reported = true; }
+    return e.doc;
+  };
+  const reject = (path: string) => parsed.set(path, { problems: [], reported: true });
   const load = (path: string, name: SchemaName, where = path): Doc | undefined => {
     if (!exists(path)) return undefined;
-    let data: Doc;
-    try { data = readData(path); } catch (e) { err(where, `cannot parse: ${(e as Error).message}`); return undefined; }
+    const data = parseChecked(path, where);
+    if (!data) return undefined;
     return schema(where, name, data) ? data : undefined;
   };
 
@@ -100,6 +110,7 @@ export function validateRoot(rootArg: string, opts: { policyPath?: string } = {}
   const evalBest = new Map<LoadedVersion, number>();
   for (const vd of discoverVersionDirs(root)) {
     const where = vd.rel;
+    try {
     const tree = inspectTree(vd.dir);
     const files = tree.files;
     const allow = (policy.files.allow as string[]).map((r) => new RegExp(r));
@@ -107,13 +118,16 @@ export function validateRoot(rootArg: string, opts: { policyPath?: string } = {}
     if (files.length > policy.limits.maxFilesPerVersion) err(where, `version directory holds ${files.length} files (max ${policy.limits.maxFilesPerVersion})`);
     for (const f of files) {
       const full = join(vd.dir, f);
-      if (!allow.some((re) => re.test(f))) { err(`${where}/${f}`, "file is not in the filename allow-list (policy files.allow); not read or scanned"); continue; }
+      if (!allow.some((re) => re.test(f))) { reject(full); err(`${where}/${f}`, "file is not in the filename allow-list (policy files.allow); not read or scanned"); continue; }
       const size = statSync(full).size;
       dirBytes += size;
-      if (size > policy.limits.maxFileBytes) { err(`${where}/${f}`, `file exceeds ${policy.limits.maxFileBytes} bytes (registry Git holds procedure, not runtime payloads); not scanned`); continue; }
-      const bad = textPolicyViolation(readFileSync(full));
-      if (bad) { err(`${where}/${f}`, `text policy: ${bad}`); continue; }
-      for (const fi of scanner.scanFile(full)) err(`${where}/${f}`, `privacy: ${fi.path || "<file>"}: ${fi.message} [${fi.detector}]`);
+      if (size > policy.limits.maxFileBytes) { reject(full); err(`${where}/${f}`, `file exceeds ${policy.limits.maxFileBytes} bytes (registry Git holds procedure, not runtime payloads); not scanned`); continue; }
+      const bytes = readFileSync(full);
+      const bad = textPolicyViolation(bytes);
+      if (bad) { reject(full); err(`${where}/${f}`, `text policy: ${bad}`); continue; }
+      const doc = parseChecked(full, `${where}/${f}`);
+      if (!doc) continue; // reported once by parseChecked; the file is not scanned, loaded or hashed
+      for (const fi of scanner.scanParsed(doc, bytes.toString("utf8"), full)) err(`${where}/${f}`, `privacy: ${fi.path || "<file>"}: ${fi.message} [${fi.detector}]`);
     }
     if (dirBytes > policy.limits.maxVersionDirBytes) err(where, `version directory exceeds ${policy.limits.maxVersionDirBytes} bytes`);
     const bp = load(join(vd.dir, FILES.blueprint), "blueprint", `${where}/${FILES.blueprint}`);
@@ -188,6 +202,10 @@ export function validateRoot(rootArg: string, opts: { policyPath?: string } = {}
       }
     }
     versions.push(loaded);
+    } catch (e) {
+      // Safety net: no unexpected exception may escape as a stack trace or be mistaken for a successful validation.
+      err(where, `unexpected failure while validating this version directory: ${(e as Error).message}`);
+    }
   }
 
   // ---- pass 2: cross-object rules + class policy
@@ -195,6 +213,7 @@ export function validateRoot(rootArg: string, opts: { policyPath?: string } = {}
   const seen = new Set<string>();
   for (const v of versions) {
     const where = v.location;
+    try {
     const key = `${v.id}@${v.version}`;
     if (seen.has(key)) err(where, `version ${key} exists more than once (candidate and/or canonical)`);
     seen.add(key);
@@ -261,6 +280,9 @@ export function validateRoot(rootArg: string, opts: { policyPath?: string } = {}
       const sec = bp.attestations.find((a: Doc) => a.type === "security-review");
       if ((pol.requiredAttestations ?? []).includes("security-review") && sec && sec.outcome !== "pass") err(where, "security-review attestation must have outcome: pass");
       if (!v.sealDigest) err(where, "canonical versions must be sealed");
+    }
+    } catch (e) {
+      err(where, `unexpected failure while applying class policy: ${(e as Error).message}`);
     }
   }
   return { root, purpose, diagnostics, versions };

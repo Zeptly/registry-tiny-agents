@@ -18,3 +18,16 @@ confirmation.
 | 10 | SemVer change classification | **Open**: SemVer required; MAJOR/MINOR/PATCH classification remains local (docs/LIFECYCLE.md) |
 | 11 | Shared capability/tool/gateway namespaces | **Deferred** by protocol |
 | 12 | Shared evaluation-result format | **Open**: attestation type `evaluation` settled; result document format registry-local |
+
+## Registry-local repairs awaiting the shared specification
+
+These were fixed locally (PR #1) and are **not** shared conventions; each needs a decision in the shared contract:
+
+* the `invalid-range` lock code, the supported range subset, and whether malformed ranges are a lock entry or an error;
+* the domain-isolation rules (single resolution domain, `DomainError` codes, exit status 2) and whether a lock should
+  carry a domain marker;
+* the numeric/value policy for digests (safe-integer limit, rejection of non-finite/unsupported values) and the YAML
+  scalar profile (YAML 1.2 core: hex/octal integers), which must match across registries for digests to agree;
+* the transcript/tape/trace detector vocabulary;
+* resolver digest re-verification at resolution time, a lock completeness indicator, optional references,
+  transitive resolution and cycle handling (all unchanged and still open).
