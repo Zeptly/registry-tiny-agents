@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:zeptly:tiny-agents:schema:upstream-source",
+  "title": "Upstream source descriptor (registry-local format)",
+  "description": "Describes an upstream catalogue. URLs live here, never in blueprints. Ingestion is SPECIFICATION ONLY; nothing is imported.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["sourceVersion", "synthetic", "id", "kind", "location", "licences", "ingestion"],
+  "properties": {
+    "sourceVersion": { "const": "upstream-source/v0-provisional" },
+    "synthetic": { "type": "boolean" },
+    "id": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryId" },
+    "kind": { "type": "string", "maxLength": 60 },
+    "location": { "type": "string", "maxLength": 300 },
+    "format": { "type": "string", "maxLength": 300 },
+    "licences": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["scope", "spdx", "observedAt"],
+        "properties": {
+          "scope": { "type": "string", "maxLength": 200 },
+          "spdx": { "type": "string", "maxLength": 64 },
+          "observedAt": { "type": "string", "format": "date" },
+          "caveat": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/longText" }
+        }
+      }
+    },
+    "observations": { "type": "array", "items": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText" } },
+    "ingestion": {
+      "type": "object", "additionalProperties": false, "required": ["status", "lock"],
+      "properties": {
+        "status": { "enum": ["specified-only", "enabled", "disabled"] },
+        "specification": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/relPath" },
+        "lock": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/relPath" }
+      }
+    }
+  }
+}

@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:zeptly:tiny-agents:schema:index",
+  "title": "Generated registry index (deterministic derived data)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "apiVersion",
+    "kind",
+    "registry",
+    "digestAlgorithm",
+    "domain",
+    "entries"
+  ],
+  "properties": {
+    "apiVersion": {
+      "const": "registry.zeptly.dev/v1alpha1"
+    },
+    "kind": {
+      "const": "RegistryIndex"
+    },
+    "registry": {
+      "const": "tiny-agents"
+    },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "registry",
+          "id",
+          "version",
+          "digest",
+          "maturity",
+          "lifecycle",
+          "origin",
+          "location",
+          "digestAlgorithm",
+          "domain"
+        ],
+        "properties": {
+          "registry": {
+            "const": "tiny-agents"
+          },
+          "id": {
+            "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryId"
+          },
+          "version": {
+            "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/semver"
+          },
+          "digest": {
+            "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digest"
+          },
+          "sealDigest": {
+            "oneOf": [
+              {
+                "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digest"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "maturity": {
+            "enum": [
+              "candidate",
+              "canonical"
+            ]
+          },
+          "lifecycle": {
+            "enum": [
+              "active",
+              "deprecated",
+              "revoked"
+            ]
+          },
+          "origin": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "enum": [
+                  "native",
+                  "upstream-seed",
+                  "discovered",
+                  "refined",
+                  "evolved"
+                ]
+              },
+              "evolution": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "kind"
+                ],
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "discovered",
+                      "refined",
+                      "generalised"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "location": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "taskClass": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "references": {
+            "type": "array",
+            "items": {
+              "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryRef"
+            }
+          },
+          "domain": {
+            "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/domain"
+          },
+          "digestAlgorithm": {
+            "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digestAlgorithm"
+          }
+        }
+      }
+    },
+    "domain": {
+      "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/domain"
+    },
+    "digestAlgorithm": {
+      "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digestAlgorithm"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "purpose": {
+            "const": "production"
+          }
+        },
+        "required": [
+          "purpose"
+        ]
+      },
+      "then": {
+        "properties": {
+          "entries": {
+            "items": {
+              "properties": {
+                "synthetic": {
+                  "const": false
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+suiteVersion: eval-suite/v0-provisional
+id: example.request-triage-suite
+version: 1.0.0
+dataProvenance: synthetic
+synthetic: true
+graders:
+  - { id: shape, type: deterministic, description: Category comes from the bound set and priority respects the ceiling. }
+cases:
+  - id: synthetic-billing-question
+    description: An invented request about a fictional invoice.
+    inputs: { request_text: "SYNTHETIC: Why was invoice number 0001 issued twice?", category_set: [billing, technical, other] }
+    expectations:
+      - { grader: shape, expect: Category is billing and priority is within the ceiling. }
+  - id: synthetic-ambiguous
+    description: An invented request that fits no category well.
+    inputs: { request_text: "SYNTHETIC: Hello, just checking in.", category_set: [billing, technical, other] }
+    expectations:
+      - { grader: shape, expect: Category is other. }

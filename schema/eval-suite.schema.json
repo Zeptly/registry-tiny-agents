@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:zeptly:tiny-agents:schema:eval-suite",
+  "title": "Blueprint evaluation suite (registry-local format)",
+  "description": "Case inputs must be synthetic. A shared evaluation-result format is unreconciled.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "suiteVersion",
+    "id",
+    "version",
+    "dataProvenance",
+    "synthetic",
+    "graders",
+    "cases"
+  ],
+  "properties": {
+    "suiteVersion": {
+      "const": "eval-suite/v0-provisional"
+    },
+    "dataProvenance": {
+      "const": "synthetic",
+      "description": "Global blueprints may only be evaluated on synthetic or properly generalised data."
+    },
+    "synthetic": {
+      "type": "boolean"
+    },
+    "graders": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "type",
+          "description"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/key"
+          },
+          "type": {
+            "enum": [
+              "deterministic",
+              "rubric",
+              "invariant"
+            ]
+          },
+          "description": {
+            "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText"
+          }
+        }
+      }
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "description",
+          "inputs",
+          "expectations"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "description": {
+            "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText"
+          },
+          "inputs": {
+            "type": "object"
+          },
+          "expectations": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "grader",
+                "expect"
+              ],
+              "properties": {
+                "grader": {
+                  "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/key"
+                },
+                "expect": {
+                  "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "id": {
+      "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryId"
+    },
+    "version": {
+      "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/semver"
+    }
+  }
+}

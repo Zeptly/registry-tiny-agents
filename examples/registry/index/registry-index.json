@@ -1,0 +1,85 @@
+{
+  "apiVersion": "registry.zeptly.dev/v1alpha1",
+  "kind": "RegistryIndex",
+  "registry": "tiny-agents",
+  "digestAlgorithm": "zeptly-jcs-v1",
+  "domain": "synthetic",
+  "entries": [
+    {
+      "registry": "tiny-agents",
+      "id": "example.request-triage",
+      "version": "0.1.0",
+      "digest": "sha256:305e94ff081cd91d9d1daafe5aa3400eb71839af6ab38a59191ec370d8865b0c",
+      "digestAlgorithm": "zeptly-jcs-v1",
+      "sealDigest": null,
+      "maturity": "candidate",
+      "lifecycle": "active",
+      "origin": {
+        "type": "evolved",
+        "evolution": {
+          "kind": "discovered"
+        }
+      },
+      "location": "blueprints/candidates/example.request-triage/0.1.0",
+      "domain": "synthetic",
+      "name": "[SYNTHETIC] Inbound Request Triage",
+      "taskClass": "ops.triage",
+      "summary": "Classify an inbound request into a small category set and annotate it with a priority.",
+      "capabilities": [
+        "queue.read",
+        "record.annotate"
+      ],
+      "references": []
+    },
+    {
+      "registry": "tiny-agents",
+      "id": "example.seed-page-reader",
+      "version": "0.1.0",
+      "digest": "sha256:aa755dfa2a56780d935000328d6801b0065fdf71fd5c661e27edb79f31418983",
+      "digestAlgorithm": "zeptly-jcs-v1",
+      "sealDigest": null,
+      "maturity": "candidate",
+      "lifecycle": "active",
+      "origin": {
+        "type": "upstream-seed"
+      },
+      "location": "blueprints/candidates/example.seed-page-reader/0.1.0",
+      "domain": "synthetic",
+      "name": "[SYNTHETIC] Seed Page Reader",
+      "taskClass": "web.read",
+      "summary": "Read a single web page and answer a question about it.",
+      "capabilities": [
+        "web.read"
+      ],
+      "references": []
+    },
+    {
+      "registry": "tiny-agents",
+      "id": "example.structured-summary",
+      "version": "1.0.0",
+      "digest": "sha256:7c953f60067a549e67b8a454971638cc26abe0d9ab17f7176a7ee5ba59eb78ea",
+      "digestAlgorithm": "zeptly-jcs-v1",
+      "sealDigest": "sha256:e85c554c25c9c6b2ad0b7d4294df778b2f65ed1998660d7caf82915a43e2f6e1",
+      "maturity": "canonical",
+      "lifecycle": "active",
+      "origin": {
+        "type": "native"
+      },
+      "location": "blueprints/canonical/example.structured-summary/1.0.0",
+      "domain": "synthetic",
+      "name": "[SYNTHETIC] Structured Document Summary",
+      "taskClass": "text.summarise",
+      "summary": "Summarise a single document into a headline summary and a bounded list of key points.",
+      "capabilities": [
+        "document.read"
+      ],
+      "references": [
+        {
+          "registry": "skills",
+          "id": "synthetic.summarise-text",
+          "version": "^1.0.0"
+        }
+      ]
+    }
+  ]
+}

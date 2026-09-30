@@ -1,0 +1,14 @@
+{
+  "integrityVersion": "integrity/v0.2",
+  "digestAlgorithm": "zeptly-jcs-v1",
+  "registry": "tiny-agents",
+  "id": "example.structured-summary",
+  "version": "1.0.0",
+  "digest": "sha256:e85c554c25c9c6b2ad0b7d4294df778b2f65ed1998660d7caf82915a43e2f6e1",
+  "payload": [
+    {
+      "path": "evals/suite.yaml",
+      "sha256": "190208c80f869c3354388729b5b0164275cf3f66abda38015f5f8b21a30a387f"
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+reportVersion: sanitisation-report/v1alpha1
+synthetic: true
+subject:
+  id: example.structured-summary
+subjectDigest: sha256:7c953f60067a549e67b8a454971638cc26abe0d9ab17f7176a7ee5ba59eb78ea
+checks:
+  - kind: secret-scan
+    result: pass
+    findings: 0
+    tool: SYNTHETIC-scanner
+  - kind: pii-scan
+    result: pass
+    findings: 0
+    tool: SYNTHETIC-scanner
+  - kind: workspace-identifier-scan
+    result: pass
+    findings: 0
+    tool: SYNTHETIC-scanner
+  - kind: concrete-config-scan
+    result: pass
+    findings: 0
+    tool: SYNTHETIC-scanner
+  - kind: slot-generalisation
+    result: pass
+    findings: 0
+  - kind: synthetic-examples
+    result: pass
+    findings: 0
+generalisation:
+  tenantContentRemoved: true
+  tenantSpecificValuesBoundToSlots: true
+  summary: SYNTHETIC report. The example was written from scratch and contains no tenant data by construction.
+reviewer:
+  kind: human
+  identity: PLACEHOLDER-sanitisation-reviewer

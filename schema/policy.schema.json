@@ -1,0 +1,306 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:zeptly:tiny-agents:schema:policy",
+  "title": "Registry governance policy (registry-local format)",
+  "description": "Thresholds and gates are POLICY, not architecture: change them by editing policy/registry-policy.yaml via PR, never by editing validator code.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "policyVersion",
+    "wisdomOfComputeDefaults",
+    "classes",
+    "privacy",
+    "namespaces",
+    "limits",
+    "files"
+  ],
+  "properties": {
+    "policyVersion": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "wisdomOfComputeDefaults": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "recurrence"
+      ],
+      "properties": {
+        "recurrence": {
+          "$ref": "#/$defs/recurrence"
+        }
+      }
+    },
+    "classes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "native",
+        "upstream-seed",
+        "discovered",
+        "refined"
+      ],
+      "properties": {
+        "native": {
+          "$ref": "#/$defs/classPolicy"
+        },
+        "upstream-seed": {
+          "$ref": "#/$defs/classPolicy"
+        },
+        "discovered": {
+          "$ref": "#/$defs/classPolicy"
+        },
+        "refined": {
+          "$ref": "#/$defs/classPolicy"
+        }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "forbiddenKeys",
+        "forbiddenConcretePatterns",
+        "pathExemptions",
+        "requiredSanitisationChecks"
+      ],
+      "properties": {
+        "forbiddenKeys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "requiredSanitisationChecks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "forbiddenConcretePatterns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "pattern"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "pattern": {
+                "type": "string"
+              },
+              "flags": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "pathExemptions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "detector",
+              "pathPattern"
+            ],
+            "properties": {
+              "detector": {
+                "type": "string"
+              },
+              "pathPattern": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "namespaces": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "syntheticIdPrefix"
+      ],
+      "properties": {
+        "syntheticIdPrefix": {
+          "type": "string",
+          "minLength": 2
+        }
+      }
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "maxFileBytes",
+        "maxVersionDirBytes",
+        "maxFilesPerVersion"
+      ],
+      "properties": {
+        "maxFileBytes": {
+          "type": "integer",
+          "minimum": 1024
+        },
+        "maxVersionDirBytes": {
+          "type": "integer",
+          "minimum": 1024
+        },
+        "maxFilesPerVersion": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "files": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allow",
+        "payload"
+      ],
+      "properties": {
+        "allow": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          },
+          "description": "Anchored regular expressions matched against the posix path of each file relative to its version directory. Anything else is rejected."
+        },
+        "payload": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          },
+          "description": "Anchored regexes selecting the permitted PAYLOAD files covered by the directory seal. Each must also match files.allow. Metadata (blueprint.yaml, represented by the artifact digest) and mutable/evidence/approval/seal records (lifecycle, integrity, promotion, submission, sanitisation report, eval results) are not payload."
+        }
+      }
+    }
+  },
+  "$defs": {
+    "recurrence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "minDistinctWorkspaces",
+        "minExecutions"
+      ],
+      "properties": {
+        "minDistinctWorkspaces": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "minExecutions": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "classPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "admission",
+        "promotion"
+      ],
+      "properties": {
+        "admission": {
+          "description": "Requirements for the candidate to exist in the registry.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "recurrence"
+          ],
+          "properties": {
+            "recurrence": {
+              "oneOf": [
+                {
+                  "const": "none"
+                },
+                {
+                  "const": "default"
+                },
+                {
+                  "$ref": "#/$defs/recurrence"
+                }
+              ]
+            },
+            "requireParentCanonical": {
+              "type": "boolean"
+            },
+            "requireLicenceSpdx": {
+              "type": "boolean"
+            }
+          }
+        },
+        "promotion": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "requireEvalPass",
+            "requireSanitisationReport",
+            "minHumanReviewers"
+          ],
+          "properties": {
+            "requireEvalPass": {
+              "type": "boolean"
+            },
+            "requireSanitisationReport": {
+              "type": "boolean"
+            },
+            "minHumanReviewers": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "requiredReviewerRoles": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "maintainer",
+                  "security",
+                  "privacy"
+                ]
+              }
+            },
+            "requireLicenceVerified": {
+              "type": "boolean"
+            },
+            "requireSecurityValidationPassed": {
+              "type": "boolean"
+            },
+            "recurrence": {
+              "oneOf": [
+                {
+                  "const": "none"
+                },
+                {
+                  "const": "default"
+                },
+                {
+                  "$ref": "#/$defs/recurrence"
+                }
+              ]
+            },
+            "requiredAttestations": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "sanitisation",
+                  "evaluation",
+                  "security-review",
+                  "recurrence"
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

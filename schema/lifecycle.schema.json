@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:zeptly:tiny-agents:schema:lifecycle",
+  "title": "Version lifecycle record (registry-local format)",
+  "description": "The ONLY file in a canonical version directory that may change after publication. Append-only history.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["state", "history"],
+  "properties": {
+    "state": { "enum": ["active", "deprecated", "revoked"] },
+    "history": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["state", "at", "reason", "actor"],
+        "properties": {
+          "state": { "enum": ["active", "deprecated", "revoked"] },
+          "at": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/dateTime" },
+          "reason": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText" },
+          "actor": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/actor" }
+        }
+      }
+    },
+    "supersededBy": {
+      "type": "object", "additionalProperties": false, "required": ["id", "version"],
+      "properties": { "id": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryId" }, "version": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/semver" } }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+# PLACEHOLDER — NOT AUTHORITATIVE.
+# No real owners or teams have been configured for this repository. Every entry below is commented out
+# on purpose: an unresolvable team handle would silently disable review enforcement. Replace the
+# PLACEHOLDER-* handles with real identities (and uncomment) once governance is configured.
+#
+# /policy/                       @PLACEHOLDER-zeptly/registry-maintainers
+# /schema/                       @PLACEHOLDER-zeptly/registry-maintainers
+# /blueprints/canonical/         @PLACEHOLDER-zeptly/registry-maintainers @PLACEHOLDER-zeptly/privacy-reviewers
+# /blueprints/candidates/        @PLACEHOLDER-zeptly/registry-maintainers
+# /upstreams/ /ingestion/        @PLACEHOLDER-zeptly/registry-maintainers @PLACEHOLDER-zeptly/security-reviewers
+# /.github/                      @PLACEHOLDER-zeptly/registry-maintainers

@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:zeptly:tiny-agents:schema:runtime-lock",
+  "title": "Exact runtime lock",
+  "description": "Protocol v0.2 RuntimeLock. Range -> exact version + artifact digest. One entry per declared reference, in declaration order; a reference that cannot be resolved is listed with status 'unresolved' and a reason code, never omitted. `complete` is true only when every entry is resolved. Deterministic: no timestamps. Resolution runs in a single domain (production or synthetic); indexes of another domain are rejected before any lock is produced. Transitive resolution and cycle detection are runtime responsibilities.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "apiVersion",
+    "kind",
+    "digestAlgorithm",
+    "domain",
+    "subject",
+    "complete",
+    "entries"
+  ],
+  "properties": {
+    "apiVersion": {
+      "const": "registry.zeptly.dev/v1alpha1"
+    },
+    "kind": {
+      "const": "RuntimeLock"
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "registry",
+        "id",
+        "version",
+        "digest"
+      ],
+      "properties": {
+        "registry": {
+          "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryName"
+        },
+        "id": {
+          "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryId"
+        },
+        "version": {
+          "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/semver"
+        },
+        "digest": {
+          "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digest"
+        }
+      }
+    },
+    "entries": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "requested",
+              "status",
+              "resolved"
+            ],
+            "properties": {
+              "requested": {
+                "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryRef"
+              },
+              "status": {
+                "const": "resolved"
+              },
+              "resolved": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "digest",
+                  "digestAlgorithm",
+                  "id",
+                  "registry",
+                  "version"
+                ],
+                "properties": {
+                  "registry": {
+                    "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryName"
+                  },
+                  "id": {
+                    "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryId"
+                  },
+                  "version": {
+                    "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/semver"
+                  },
+                  "digest": {
+                    "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digest"
+                  },
+                  "sealDigest": {
+                    "oneOf": [
+                      {
+                        "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digest"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "maturity": {
+                    "enum": [
+                      "candidate",
+                      "canonical"
+                    ]
+                  },
+                  "digestAlgorithm": {
+                    "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digestAlgorithm"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "requested",
+              "status",
+              "unresolved"
+            ],
+            "properties": {
+              "requested": {
+                "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryRef"
+              },
+              "status": {
+                "const": "unresolved"
+              },
+              "unresolved": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "code",
+                  "message"
+                ],
+                "properties": {
+                  "code": {
+                    "enum": [
+                      "no-peer-index",
+                      "not-found",
+                      "no-eligible-version",
+                      "digest-mismatch",
+                      "invalid-range"
+                    ],
+                    "description": "'invalid-range' is a registry-local code pending the shared code list."
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "digestAlgorithm": {
+      "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digestAlgorithm"
+    },
+    "domain": {
+      "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/domain"
+    },
+    "complete": {
+      "type": "boolean",
+      "description": "true only when every entry is resolved (and entries is not empty of declared references that failed)."
+    }
+  }
+}

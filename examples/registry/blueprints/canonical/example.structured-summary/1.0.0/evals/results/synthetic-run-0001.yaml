@@ -1,0 +1,18 @@
+resultVersion: eval-result/v1alpha1
+synthetic: true
+subject:
+  id: example.structured-summary
+subjectDigest: sha256:7c953f60067a549e67b8a454971638cc26abe0d9ab17f7176a7ee5ba59eb78ea
+suiteDigest: sha256:190208c80f869c3354388729b5b0164275cf3f66abda38015f5f8b21a30a387f
+runner: SYNTHETIC fabricated result - not a real evaluation run
+summary:
+  cases: 3
+  passed: 3
+  passRate: 1
+caseResults:
+  - case: synthetic-short-memo
+    passed: true
+  - case: synthetic-injection-attempt
+    passed: true
+  - case: synthetic-long-list
+    passed: true

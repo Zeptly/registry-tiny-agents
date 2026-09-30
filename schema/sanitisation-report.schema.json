@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:zeptly:tiny-agents:schema:sanitisation-report",
+  "title": "Sanitisation / generalisation report (registry-local format)",
+  "description": "Attests that procedure was generalised and tenant data excluded. Bound to the artifact CONTENT digest; stale reports fail validation. The privacy scanner re-runs independently in CI.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "reportVersion",
+    "synthetic",
+    "subject",
+    "subjectDigest",
+    "checks",
+    "generalisation",
+    "reviewer"
+  ],
+  "properties": {
+    "reportVersion": {
+      "const": "sanitisation-report/v1alpha1"
+    },
+    "synthetic": {
+      "type": "boolean"
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryId"
+        }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "result",
+          "findings"
+        ],
+        "properties": {
+          "kind": {
+            "enum": [
+              "secret-scan",
+              "pii-scan",
+              "workspace-identifier-scan",
+              "concrete-config-scan",
+              "denylist",
+              "free-text-review",
+              "slot-generalisation",
+              "synthetic-examples"
+            ]
+          },
+          "result": {
+            "enum": [
+              "pass",
+              "fail"
+            ]
+          },
+          "findings": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "tool": {
+            "type": "string",
+            "maxLength": 100
+          }
+        }
+      }
+    },
+    "generalisation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tenantContentRemoved",
+        "tenantSpecificValuesBoundToSlots",
+        "summary"
+      ],
+      "properties": {
+        "tenantContentRemoved": {
+          "type": "boolean"
+        },
+        "tenantSpecificValuesBoundToSlots": {
+          "type": "boolean"
+        },
+        "summary": {
+          "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/shortText"
+        }
+      }
+    },
+    "reviewer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "identity"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "automated",
+            "human"
+          ]
+        },
+        "identity": {
+          "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/actor"
+        }
+      }
+    },
+    "subjectDigest": {
+      "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digest"
+    }
+  }
+}

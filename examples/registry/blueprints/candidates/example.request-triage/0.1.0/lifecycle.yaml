@@ -1,0 +1,3 @@
+state: active
+history:
+  - { state: active, at: "2026-02-01T00:00:00Z", reason: SYNTHETIC example candidate admission, actor: PLACEHOLDER-registry-maintainers }

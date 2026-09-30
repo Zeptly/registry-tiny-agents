@@ -1,0 +1,18 @@
+suiteVersion: eval-suite/v0-provisional
+id: example.seed-page-reader-suite
+version: 1.0.0
+dataProvenance: synthetic
+synthetic: true
+graders:
+  - { id: grounding, type: rubric, description: Answer is supported by the page content. }
+cases:
+  - id: synthetic-simple-fact
+    description: A fact stated on an invented page.
+    inputs: { question: "SYNTHETIC: What is the fictional shop's opening hour?", page_reference: synthetic-page-0001 }
+    expectations:
+      - { grader: grounding, expect: States the opening hour from the page. }
+  - id: synthetic-missing-fact
+    description: A question the invented page does not answer.
+    inputs: { question: "SYNTHETIC: What is the fictional shop's phone line?", page_reference: synthetic-page-0001 }
+    expectations:
+      - { grader: grounding, expect: Says the page does not contain the answer. }

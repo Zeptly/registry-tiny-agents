@@ -1,0 +1,17 @@
+promotionVersion: promotion/v1alpha1
+synthetic: true
+promotedFrom:
+  maturity: candidate
+  version: 0.2.0
+decidedAt: 2026-01-01T00:00:00Z
+policyVersion: 0
+reviewers:
+  - identity: PLACEHOLDER-reviewer-maintainer
+    role: maintainer
+gatesChecked:
+  - eval-pass
+  - sanitisation-report
+  - privacy-scan
+  - human-review
+notes: SYNTHETIC record. No real review took place.
+subjectDigest: sha256:7c953f60067a549e67b8a454971638cc26abe0d9ab17f7176a7ee5ba59eb78ea

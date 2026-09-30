@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:zeptly:tiny-agents:schema:common",
+  "title": "Common definitions (aligned to Zeptly Registry Protocol v0.2; capability namespace still deferred)",
+  "description": "Structured cross-registry references per Registry Protocol v0.1. Serialisation-sensitive definitions (id pattern, digest, capability names) stay here and in tools/src/ids.ts only.",
+  "$defs": {
+    "registryId": {
+      "description": "Shared logical identity grammar: lowercase ASCII letters and digits in segments separated by single '.' or '-'. No registry-specific prefix. Independent of filesystem layout.",
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 128,
+      "pattern": "^[a-z0-9]+([.-][a-z0-9]+)*$"
+    },
+    "registryName": {
+      "description": "Registry/type discriminator for cross-registry references (e.g. 'skills', 'tiny-agents').",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,31}$"
+    },
+    "semver": {
+      "description": "SemVer 2.0.0 version.",
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$"
+    },
+    "versionRange": {
+      "description": "PROVISIONAL version or version range for a cross-registry reference.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[0-9A-Za-z.^~<>=* |-]+$"
+    },
+    "digest": {
+      "description": "Content digest '<algorithm>:<hex>' (sha256).",
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "registryRef": {
+      "description": "Protocol v0.2 structured reference {registry, id, version, digest?, digestAlgorithm?}. `version` may be a range; digest may be omitted or null; a non-null digest requires digestAlgorithm.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "registry",
+        "id",
+        "version"
+      ],
+      "properties": {
+        "registry": {
+          "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryName"
+        },
+        "id": {
+          "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryId"
+        },
+        "version": {
+          "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/versionRange"
+        },
+        "digest": {
+          "oneOf": [
+            {
+              "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "digestAlgorithm": {
+          "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digestAlgorithm"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "digest"
+            ],
+            "properties": {
+              "digest": {
+                "type": "string"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "digestAlgorithm"
+            ]
+          }
+        }
+      ]
+    },
+    "capabilityName": {
+      "description": "PROVISIONAL abstract capability name. The shared capability/tool/gateway namespace is NOT yet reconciled.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(\\.[a-z][a-z0-9-]*)+$",
+      "maxLength": 80
+    },
+    "key": {
+      "description": "Local identifier inside a single blueprint (step id, slot name, skill key, capability key).",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,47}$"
+    },
+    "relPath": {
+      "description": "Relative path inside the same version directory. '..' segments are rejected by the validator.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]*$",
+      "maxLength": 200
+    },
+    "shortText": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "longText": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000
+    },
+    "effectClass": {
+      "description": "AgentGit-inspired tool-effect classification (vocabulary only; no AgentGit dependency).",
+      "enum": [
+        "reversible",
+        "compensable",
+        "irreversible"
+      ]
+    },
+    "dateTime": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "actor": {
+      "description": "Governance identity. Placeholders (prefix 'PLACEHOLDER-') are rejected in a production registry root.",
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 100
+    },
+    "digestAlgorithm": {
+      "description": "Versioned hash contract identifier (Protocol v0.2). Any change to canonicalization, projection or seal rules requires a new identifier and new vectors.",
+      "const": "zeptly-jcs-v1"
+    },
+    "domain": {
+      "description": "Resolution/publication domain. `synthetic` content is fabricated example content and never enters production indexes or resolution.",
+      "enum": [
+        "production",
+        "synthetic"
+      ]
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:zeptly:tiny-agents:schema:upstream-lock",
+  "title": "Upstream lock (registry-local format)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["lockVersion", "source", "pinnedRevision", "entries"],
+  "properties": {
+    "lockVersion": { "const": "upstream-lock/v0-provisional" },
+    "source": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryId" },
+    "pinnedRevision": { "type": ["string", "null"] },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["path", "revision", "contentDigest", "blueprint"],
+        "properties": {
+          "path": { "type": "string" }, "revision": { "type": "string" },
+          "contentDigest": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/digest" },
+          "blueprint": { "type": "object", "additionalProperties": false, "required": ["id", "version"],
+            "properties": { "id": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/registryId" }, "version": { "$ref": "urn:zeptly:tiny-agents:schema:common#/$defs/semver" } } }
+        }
+      }
+    }
+  }
+}
